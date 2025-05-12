@@ -34,6 +34,16 @@ const MapsIcon = <i className="bx bx-map side-menu__icon"></i>;
 
 const Icons = <i className="bx bx-store-alt side-menu__icon"></i>;
 
+const CategoryIcon = <i className="bx bx-category side-menu__icon"></i>;
+
+const ProductIcon = <i className="bx bx-package side-menu__icon"></i>;
+
+const TransactionIcon = <i className="bx bx-transfer-alt side-menu__icon"></i>;
+
+const LeadIcon = <i className="bx bx-user-plus side-menu__icon"></i>;
+
+const UserIcon = <i className="bx bx-user side-menu__icon"></i>;
+
 const badge = (
   <span className="badge !bg-warning/10 !text-warning !py-[0.25rem] !px-[0.45rem] !text-[0.75em] ms-1">
     12
@@ -62,74 +72,66 @@ export const MenuItems: any = [
 
   {
     icon: DashboardIcon,
-    badgetxt: badge,
     title: "Dashboards",
-    type: "sub",
+    type: "link",
+    path: "/dashboards/analytics",
     active: false,
     selected: false,
-    children: [
-      {
-        path: "/dashboards/crm",
-        type: "link",
-        active: false,
-        selected: false,
-        dirchange: false, 
-        title: "CRM",
-      },
-
-    ],
+    dirchange: false
   },
 
   {
-    icon: NestedmenuIcon,
-    title: "Nested Menu",
-    selected: false,
-    active: false,
-    type: "sub",
-    children: [
-      {
-        path: "",
-        title: "Nested-1",
-        type: "empty",
-        active: false,
-        selected: false,
-        dirchange: false, 
-      },
+    menutitle: "GENERAL",
+  },
 
-      {
-        title: "Nested-2",
-        type: "sub",
-        active: false,
-        selected: false,
-        dirchange: false, 
-        children: [
-          {
-            path: "",
-            type: "empty",
-            active: false,
-            selected: false,
-            dirchange: false, 
-            title: "Nested-2-1",
-          },
-          {
-            path: "",
-            type: "empty",
-            ctive: false,
-            selected: false,
-            dirchange: false, 
-            title: "Nested-2-2",
-          },
-          {
-            path: "",
-            type: "empty",
-            active: false,
-            selected: false,
-            dirchange: false, 
-            title: "Nested-2-3",
-          },
-        ],
-      },
-    ],
+  {
+    icon: UserIcon,
+    title: "Users",
+    type: "link",
+    path: "/users/users",
+    active: false,
+    selected: false,
+    dirchange: false
+  },
+
+  {
+    icon: CategoryIcon,
+    title: "Category",
+    type: "link",
+    path: "/category/category",
+    active: false,
+    selected: false,
+    dirchange: false
+  },
+
+  {
+    icon: ProductIcon,
+    title: "Products",
+    type: "link",
+    path: "/products/products",
+    active: false,
+    selected: false,
+    dirchange: false
+  },
+
+  {
+    icon: TransactionIcon,
+    title: "Transactions",
+    type: "link",
+    path: "/transactions/transactions",
+    active: false,
+    selected: false,
+    dirchange: false
+  },
+
+  {
+    icon: LeadIcon,
+    title: "Leads",
+    type: "link",
+    path: "/leads/leads",
+    active: false,
+    selected: false,
+    dirchange: false
   },
 
  

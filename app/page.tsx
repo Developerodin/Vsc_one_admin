@@ -4,6 +4,8 @@ import { auth } from "@/shared/firebase/firebaseapi";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import axios from "axios";
+import { Base_url } from "./api/config/BaseUrl";
 
 export default function Home() {
   useEffect(() => {
@@ -13,9 +15,10 @@ export default function Home() {
   const [passwordshow1, setpasswordshow1] = useState(false);
 
   const [err, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState({
-    "email": "adminnextjs@gmail.com",
-    "password": "1234567890",
+    "email": "",
+    "password": "",
   });
   const { email, password } = data;
   const changeHandler = (e: any) => {
@@ -24,28 +27,82 @@ export default function Home() {
   };
   const Login = (e: any) => {
     e.preventDefault();
+    setIsLoading(true);
     auth.signInWithEmailAndPassword(email, password).then(
-      user => { console.log(user); RouteChange(); }).catch(err => { setError(err.message); });
+      user => { console.log(user); RouteChange(); }).catch(err => { setError(err.message); setIsLoading(false); });
   };
 
-  const Login1 = (_e: any) => {
-    if (data.email == "adminnextjs@gmail.com" && data.password == "1234567890") {
-      RouteChange();
+  const Login1 = async (e: any) => {
+    e.preventDefault();
+    
+    // Validate input fields
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
     }
-    else {
-      setError("The Auction details did not Match");
-      setData({
-        "email": "adminnextjs@gmail.com",
-        "password": "1234567890",
+    
+    if (!password.trim()) {
+      setError("Password is required");
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const response = await axios.post(`${Base_url}auth/login`, {
+        email: data.email,
+        password: data.password
       });
+      
+      console.log("Login response:", response.data);
+      
+      if (response.data) {
+        // Store tokens and user data based on the provided response structure
+        const { user, tokens } = response.data;
+        
+        // Store access token
+        localStorage.setItem("token", tokens.access.token);
+        
+        // Store refresh token
+        localStorage.setItem("refreshToken", tokens.refresh.token);
+        
+        // Store user data
+        localStorage.setItem("user", JSON.stringify(user));
+        
+        // Navigate to dashboard
+        RouteChange();
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      if (error.response?.status === 401) {
+        setError("Invalid email or password");
+      } else {
+        setError(error.response?.data?.message || "Login failed. Please try again later.");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const router = useRouter();
   const RouteChange = () => {
-    let path = "/dashboards/crm";
+    let path = "/dashboards/analytics";
     router.push(path);
   };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+        // Your sign in logic here
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    } catch (error) {
+        setError("Invalid credentials");
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
   return (
     <>
     <html>
@@ -56,7 +113,7 @@ export default function Home() {
             <div className="xxl:col-span-4 xl:col-span-4 lg:col-span-4 md:col-span-3 sm:col-span-2"></div>
             <div className="xxl:col-span-4 xl:col-span-4 lg:col-span-4 md:col-span-6 sm:col-span-8 col-span-12">
               <div className="my-[2.5rem] flex justify-center">
-                <Link href="/dashboards/crm/">
+                <Link href="/dashboards/analytics/">
                   <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-logo.png`} alt="logo" className="desktop-logo" />
                   <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-dark.png`} alt="logo" className="desktop-dark" />
                 </Link>
@@ -66,12 +123,12 @@ export default function Home() {
                 <nav className="!block px-6  mx-auto firebase-data" aria-label="Tabs" role="tablist">
                   <div className="flex justify-center space-x-2 bg-light p-2 rounded-md rtl:space-x-reverse">
 
-                    <button type="button" className="hs-tab-active:bg-primary hs-tab-active:text-white py-2 px-2 inline-flex items-center gap-2 bg-transparent text-sm font-medium text-center text-gray-500 rounded-sm hover:text-primary  dark:text-white/70 dark:hover:text-white active" id="pills-with-brand-color-item-1" data-hs-tab="#pills-with-brand-color-01" aria-controls="pills-with-brand-color-01">
-                      <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/nextjs.png`} alt="user-img" className="avatar avatar-sm w-6 h-6 rounded-full ring-0" />
+                    <button type="button"  data-hs-tab="#pills-with-brand-color-01" aria-controls="pills-with-brand-color-01">
+                      <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/icons/logo.png`} alt="user-img" className="avatar avatar-sm w-6 h-6 rounded-full ring-0" />
                     </button>
-                    <button type="button" className="hs-tab-active:bg-primary hs-tab-active:text-white py-2 px-2 inline-flex items-center gap-2 bg-transparent text-sm font-medium text-center text-gray-500 rounded-sm hover:text-primary  dark:text-white/70 dark:hover:text-white" id="pills-with-brand-color-item-2" data-hs-tab="#pills-with-brand-color-02" aria-controls="pills-with-brand-color-02">
+                    {/* <button type="button" className="hs-tab-active:bg-primary hs-tab-active:text-white py-2 px-2 inline-flex items-center gap-2 bg-transparent text-sm font-medium text-center text-gray-500 rounded-sm hover:text-primary  dark:text-white/70 dark:hover:text-white" id="pills-with-brand-color-item-2" data-hs-tab="#pills-with-brand-color-02" aria-controls="pills-with-brand-color-02">
                       <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/firbase.png`} alt="user-img" className="avatar avatar-sm w-6 h-6 rounded-full ring-0" />
-                    </button>
+                    </button> */}
                   </div>
                 </nav>
 
@@ -82,16 +139,16 @@ export default function Home() {
                     {err}
                   </div>}
 
-                  <p className="mb-4 text-[#8c9097] dark:text-white/50 opacity-[0.7] font-normal text-center">Welcome back Jhon !</p>
+                  <p className="mb-4 text-[#8c9097] dark:text-white/50 opacity-[0.7] font-normal text-center">Welcome Back!</p>
                   <div className="grid grid-cols-12 gap-y-4">
                     <div className="xl:col-span-12 col-span-12">
                       <label htmlFor="signin-email" className="form-label text-default">Email</label>
-                      <input type="text" name="email" className="form-control form-control-lg w-full !rounded-md" id="email" onChange={changeHandler} value={email} />
+                      <input type="text" name="email" className="form-control form-control-lg w-full !rounded-md" id="email" onChange={changeHandler} value={email} placeholder="Enter your email" />
                     </div>
                     <div className="xl:col-span-12 col-span-12 mb-2">
-                      <label htmlFor="signin-password" className="form-label text-default block">Password<Link href="#!" className="float-right text-danger">Forget password ?</Link></label>
+                      <label htmlFor="signin-password" className="form-label text-default block">Password<Link href="/authentication/reset-password/reset-basic/" className="float-right text-danger">Forget password ?</Link></label>
                       <div className="input-group">
-                        <input name="password" type={(passwordshow1) ? 'text' : "password"} value={password} onChange={changeHandler} className="form-control  !border-s form-control-lg !rounded-s-md" id="signin-password" placeholder="password" />
+                        <input name="password" type={(passwordshow1) ? 'text' : "password"} value={password} onChange={changeHandler} className="form-control  !border-s form-control-lg !rounded-s-md" id="signin-password" placeholder="Enter your password" />
                         <button onClick={() => setpasswordshow1(!passwordshow1)} aria-label="button" className="ti-btn ti-btn-light !rounded-s-none !mb-0" type="button" id="button-addon2"><i className={`${passwordshow1 ? 'ri-eye-line' : 'ri-eye-off-line'} align-middle`}></i></button>
                       </div>
                       <div className="mt-2">
@@ -103,8 +160,17 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                    <div className="xl:col-span-12 col-span-12 grid mt-0">
-                      <button onClick={Login1}  className="ti-btn ti-btn-primary !bg-primary !text-white !font-medium">Sign In</button>
+                    <div className="xl:col-span-12 col-span-12 grid mt-2">
+                      <button onClick={Login1} className="ti-btn ti-btn-primary !bg-primary !text-white !font-medium">
+                        {isLoading ? (
+                          <>
+                            <i className="ri-loader-4-line animate-spin me-1"></i>
+                            Signing in...
+                          </>
+                        ) : (
+                          'Sign In'
+                        )}
+                      </button>
                     </div>
                   </div>
                   <div className="text-center">
@@ -130,14 +196,14 @@ export default function Home() {
                   {err && <div className="p-4 mb-4 bg-danger/40 text-sm  border-t-4 border-danger text-danger/60 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
                     {err}
                   </div>}
-                  <p className="mb-4 text-[#8c9097] dark:text-white/50 opacity-[0.7] font-normal text-center">Welcome back Jhon !</p>
+                  <p className="mb-4 text-[#8c9097] dark:text-white/50 opacity-[0.7] font-normal text-center">Welcome back !</p>
                   <div className="grid grid-cols-12 gap-y-4">
                     <div className="xl:col-span-12 col-span-12">
                       <label htmlFor="signin-email" className="form-label text-default">Email</label>
                       <input type="email" name="email" className="form-control form-control-lg w-full !rounded-md" id="email" onChange={changeHandler} value={email} placeholder="Email" />
                     </div>
                     <div className="xl:col-span-12 col-span-12 mb-2">
-                      <label htmlFor="signin-password" className="form-label text-default block">Password<Link href="#!" className="float-right text-danger">Forget password ?</Link></label>
+                      <label htmlFor="signin-password" className="form-label text-default block">Password<Link href="/authentication/reset-password/reset-basic/" className="float-right text-danger">Forget password ?</Link></label>
                       <div className="input-group">
                         <input name="password" type={(passwordshow1) ? 'text' : "password"} value={password} onChange={changeHandler} className="form-control form-control-lg !rounded-s-md" id="signin-password" placeholder="password" />
                         <button onClick={() => setpasswordshow1(!passwordshow1)} aria-label="button" className="ti-btn ti-btn-light !rounded-s-none !mb-0" type="button" id="button-addon2"><i className={`${passwordshow1 ? 'ri-eye-line' : 'ri-eye-off-line'} align-middle`}></i></button>
@@ -152,13 +218,26 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="xl:col-span-12 col-span-12 grid mt-2">
-                      <button onClick={Login} className="ti-btn ti-btn-primary !bg-primary !text-white !font-medium">Sign In</button>
+                      <button 
+                        type="submit" 
+                        className="ti-btn ti-btn-primary w-full" 
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <i className="ri-loader-4-line animate-spin me-1"></i>
+                            Signing in...
+                          </>
+                        ) : (
+                          'Sign In'
+                        )}
+                      </button>
                     </div>
                   </div>
                   <div className="text-center">
                     <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mt-4">Dont have an account? <Link href="#!" className="text-primary">Sign Up</Link></p>
                   </div>
-                  <div className="text-center my-4 authentication-barrier">
+                  {/* <div className="text-center my-4 authentication-barrier">
                     <span>OR</span>
                   </div>
                   <div className="btn-list text-center">
@@ -171,7 +250,7 @@ export default function Home() {
                     <button aria-label="button" type="button" className="ti-btn ti-btn-icon ti-btn-light">
                       <i className="ri-twitter-x-line font-bold text-dark opacity-[0.7]"></i>
                     </button>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
