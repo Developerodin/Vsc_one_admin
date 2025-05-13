@@ -14,11 +14,15 @@ const Products = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         name: '',
         type: '',
-        category: '',
+        categories: [],
         description: '',
+        features: [''],
+        terms: [''],
+        eligibility: '',
         commission: {
             percentage: 0,
             minAmount: 0,
@@ -30,30 +34,35 @@ const Products = () => {
             currency: 'INR',
             discounts: []
         },
-        subCategory: '',
-        features: [''],
-        terms: [''],
-        eligibility: '',
         coverage: '',
         duration: '',
-        interestRate: 0,
-        loanAmount: {
-            min: 0,
-            max: 0
-        },
-        tenure: {
-            min: 0,
-            max: 0
-        },
         status: 'active',
         documents: [],
-        images: [],
-        metadata: {}
+        images: []
     });
 
     useEffect(() => {
         fetchProducts();
+        fetchCategories();
     }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${Base_url}categories`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const categoryOptions = response.data.results.map((category: any) => ({
+                value: category.id,
+                label: category.name
+            }));
+            setCategories(categoryOptions);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    };
 
     const fetchProducts = async () => {
         try {
@@ -69,7 +78,7 @@ const Products = () => {
                 srNo: index + 1,
                 name: product.name || '--',
                 type: product.type || '--',
-                category: product.category || '--',
+                category: product.categories?.[0] || '--',
                 commission: `${product.commission?.percentage || 0}%`,
                 duration: product.duration || '--',
                 status: product.status || '--',
@@ -77,17 +86,18 @@ const Products = () => {
                     {
                         icon: 'ri-eye-line',
                         className: 'ti-btn-primary',
-                        onClick: () => openProductModal(product.id)
+                        href: '#'
+                        
                     },
                     {
                         icon: 'ri-edit-line',
                         className: 'ti-btn-info',
-                        onClick: () => openUpdateModal(product.id)
+                        href: '#'
                     },
                     {
                         icon: 'ri-delete-bin-line',
                         className: 'ti-btn-danger',
-                        onClick: () => openDeleteModal(product.id)
+                        href: '#'
                     }
                 ]
             }));
@@ -122,10 +132,17 @@ const Products = () => {
     };
 
     const handleSelectChange = (name: string, selectedOption: any) => {
-        setFormData(prev => ({
-            ...prev,
-            [name]: selectedOption.value
-        }));
+        if (name === 'categories') {
+            setFormData(prev => ({
+                ...prev,
+                categories: selectedOption.map((option: any) => option.value)
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: selectedOption.value
+            }));
+        }
     };
 
     const handleArrayInputChange = (index: number, value: string, field: 'features' | 'terms') => {
@@ -163,8 +180,11 @@ const Products = () => {
             setFormData({
                 name: '',
                 type: '',
-                category: '',
+                categories: [],
                 description: '',
+                features: [''],
+                terms: [''],
+                eligibility: '',
                 commission: {
                     percentage: 0,
                     minAmount: 0,
@@ -176,29 +196,19 @@ const Products = () => {
                     currency: 'INR',
                     discounts: []
                 },
-                subCategory: '',
-                features: [''],
-                terms: [''],
-                eligibility: '',
                 coverage: '',
                 duration: '',
-                interestRate: 0,
-                loanAmount: {
-                    min: 0,
-                    max: 0
-                },
-                tenure: {
-                    min: 0,
-                    max: 0
-                },
                 status: 'active',
                 documents: [],
-                images: [],
-                metadata: {}
+                images: []
             });
             const modal = document.getElementById('create-product');
+            const backdrop = document.querySelector('.hs-overlay-backdrop');
             if (modal) {
                 modal.classList.add('hidden');
+            }
+            if (backdrop) {
+                backdrop.remove();
             }
             // Refresh products list
             fetchProducts();
@@ -288,15 +298,17 @@ const Products = () => {
                                                             />
                                                         </div>
                                                         <div className="xl:col-span-6 col-span-12">
-                                                            <label htmlFor="category" className="form-label">Category *</label>
-                                                            <input
-                                                                type="text"
-                                                                className="form-control"
-                                                                id="category"
-                                                                name="category"
-                                                                value={formData.category}
-                                                                onChange={handleInputChange}
-                                                                placeholder="Enter Category"
+                                                            <label className="form-label">Categories *</label>
+                                                            <Select
+                                                                id="categories-select"
+                                                                name="categories"
+                                                                options={categories}
+                                                                onChange={(option) => handleSelectChange('categories', option)}
+                                                                className=""
+                                                                menuPlacement='auto'
+                                                                classNamePrefix="Select2"
+                                                                placeholder="Select Categories"
+                                                                isMulti
                                                                 required
                                                             />
                                                         </div>
@@ -328,6 +340,48 @@ const Products = () => {
                                                             />
                                                         </div>
                                                         <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="commission.minAmount" className="form-label">Min Amount *</label>
+                                                            <input
+                                                                type="number"
+                                                                className="form-control"
+                                                                id="commission.minAmount"
+                                                                name="commission.minAmount"
+                                                                value={formData.commission.minAmount}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Min Amount"
+                                                                min="0"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="commission.maxAmount" className="form-label">Max Amount *</label>
+                                                            <input
+                                                                type="number"
+                                                                className="form-control"
+                                                                id="commission.maxAmount"
+                                                                name="commission.maxAmount"
+                                                                value={formData.commission.maxAmount}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Max Amount"
+                                                                min="0"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="commission.bonus" className="form-label">Bonus *</label>
+                                                            <input
+                                                                type="number"
+                                                                className="form-control"
+                                                                id="commission.bonus"
+                                                                name="commission.bonus"
+                                                                value={formData.commission.bonus}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Bonus"
+                                                                min="0"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
                                                             <label htmlFor="pricing.basePrice" className="form-label">Base Price *</label>
                                                             <input
                                                                 type="number"
@@ -341,22 +395,34 @@ const Products = () => {
                                                                 required
                                                             />
                                                         </div>
-
-                                                        {/* Optional Fields */}
                                                         <div className="xl:col-span-6 col-span-12">
-                                                            <label htmlFor="subCategory" className="form-label">Sub Category</label>
+                                                            <label htmlFor="coverage" className="form-label">Coverage *</label>
                                                             <input
                                                                 type="text"
                                                                 className="form-control"
-                                                                id="subCategory"
-                                                                name="subCategory"
-                                                                value={formData.subCategory}
+                                                                id="coverage"
+                                                                name="coverage"
+                                                                value={formData.coverage}
                                                                 onChange={handleInputChange}
-                                                                placeholder="Enter Sub Category"
+                                                                placeholder="Enter Coverage"
+                                                                required
                                                             />
                                                         </div>
                                                         <div className="xl:col-span-6 col-span-12">
-                                                            <label htmlFor="eligibility" className="form-label">Eligibility</label>
+                                                            <label htmlFor="duration" className="form-label">Duration *</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-control"
+                                                                id="duration"
+                                                                name="duration"
+                                                                value={formData.duration}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Duration"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-12">
+                                                            <label htmlFor="eligibility" className="form-label">Eligibility *</label>
                                                             <textarea
                                                                 className="form-control"
                                                                 id="eligibility"
@@ -364,12 +430,13 @@ const Products = () => {
                                                                 value={formData.eligibility}
                                                                 onChange={handleInputChange}
                                                                 placeholder="Enter Eligibility Criteria"
+                                                                required
                                                             />
                                                         </div>
 
                                                         {/* Features Array */}
                                                         <div className="col-span-12">
-                                                            <label className="form-label">Features</label>
+                                                            <label className="form-label">Features *</label>
                                                             {formData.features.map((feature, index) => (
                                                                 <div key={index} className="flex gap-2 mb-2">
                                                                     <input
@@ -378,6 +445,7 @@ const Products = () => {
                                                                         value={feature}
                                                                         onChange={(e) => handleArrayInputChange(index, e.target.value, 'features')}
                                                                         placeholder="Enter Feature"
+                                                                        required
                                                                     />
                                                                     <button
                                                                         type="button"
@@ -399,7 +467,7 @@ const Products = () => {
 
                                                         {/* Terms Array */}
                                                         <div className="col-span-12">
-                                                            <label className="form-label">Terms</label>
+                                                            <label className="form-label">Terms *</label>
                                                             {formData.terms.map((term, index) => (
                                                                 <div key={index} className="flex gap-2 mb-2">
                                                                     <input
@@ -408,6 +476,7 @@ const Products = () => {
                                                                         value={term}
                                                                         onChange={(e) => handleArrayInputChange(index, e.target.value, 'terms')}
                                                                         placeholder="Enter Term"
+                                                                        required
                                                                     />
                                                                     <button
                                                                         type="button"
