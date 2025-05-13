@@ -47,8 +47,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -73,8 +73,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -99,8 +99,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -125,8 +125,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -151,8 +151,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -177,8 +177,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -203,8 +203,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -229,8 +229,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -255,8 +255,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -281,8 +281,8 @@ const Products = () => {
             status: 'Active',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {

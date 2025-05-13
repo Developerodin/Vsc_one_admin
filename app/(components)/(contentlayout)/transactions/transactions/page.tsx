@@ -50,8 +50,8 @@ const Transactions = () => {
             transactionId: 'TRX-001',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -76,8 +76,8 @@ const Transactions = () => {
             transactionId: 'TRX-002',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -102,8 +102,8 @@ const Transactions = () => {
             transactionId: 'TRX-003',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -128,8 +128,8 @@ const Transactions = () => {
             transactionId: 'TRX-004',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -154,8 +154,8 @@ const Transactions = () => {
             transactionId: 'TRX-005',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -180,8 +180,8 @@ const Transactions = () => {
             transactionId: 'TRX-006',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -206,8 +206,8 @@ const Transactions = () => {
             transactionId: 'TRX-007',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -232,8 +232,8 @@ const Transactions = () => {
             transactionId: 'TRX-008',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -258,8 +258,8 @@ const Transactions = () => {
             transactionId: 'TRX-009',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -284,8 +284,8 @@ const Transactions = () => {
             transactionId: 'TRX-010',
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {

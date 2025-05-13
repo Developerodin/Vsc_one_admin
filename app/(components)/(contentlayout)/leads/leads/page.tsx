@@ -57,8 +57,8 @@ const Leads = () => {
             leadTracking: <Link href="/leads/timeline" className="text-primary hover:text-primary-dark">View Timeline</Link>,
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -82,8 +82,8 @@ const Leads = () => {
             leadTracking: <Link href="/leads/timeline" className="text-primary hover:text-primary-dark">View Timeline</Link>,
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -107,8 +107,8 @@ const Leads = () => {
             leadTracking: <Link href="/leads/timeline" className="text-primary hover:text-primary-dark">View Timeline</Link>,
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -132,8 +132,8 @@ const Leads = () => {
             leadTracking: <Link href="/leads/timeline" className="text-primary hover:text-primary-dark">View Timeline</Link>,
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
@@ -157,8 +157,8 @@ const Leads = () => {
             leadTracking: <Link href="/leads/timeline" className="text-primary hover:text-primary-dark">View Timeline</Link>,
             actions: [
                 {
-                    icon: 'ri-download-2-line',
-                    className: 'ti-btn-success',
+                    icon: 'ri-eye-line',
+                    className: 'ti-btn-primary',
                     href: '#'
                 },
                 {
