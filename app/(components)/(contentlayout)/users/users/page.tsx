@@ -347,9 +347,9 @@ const Users = () => {
           <div className="fixed inset-0 z-40 bg-black/50 transition-opacity"></div>
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all w-full max-w-4xl">
-                <div className="ti-modal-header">
-                  <h6 className="modal-title">User Detailss</h6>
+              <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all w-full max-w-4xl my-8">
+                <div className="ti-modal-header flex justify-between items-center px-6 py-3 border-b">
+                  <h6 className="modal-title text-lg font-semibold">User Details</h6>
                   <button
                     type="button"
                     className="hs-dropdown-toggle ti-modal-close-btn"
@@ -371,7 +371,7 @@ const Users = () => {
                     </svg>
                   </button>
                 </div>
-                <div className="ti-modal-body">
+                <div className="ti-modal-body px-6 py-3 max-h-[calc(100vh-300px)] overflow-y-auto">
                   {loadingUserDetails ? (
                     <div className="flex justify-center py-6">
                       <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent"></div>
@@ -513,7 +513,7 @@ const Users = () => {
                     )
                   )}
                 </div>
-                <div className="ti-modal-footer">
+                <div className="ti-modal-footer flex justify-end px-6 py-3 border-t">
                   <button
                     type="button"
                     className="ti-btn ti-btn-light"
