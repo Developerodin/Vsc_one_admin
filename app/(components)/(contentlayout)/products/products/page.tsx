@@ -2,22 +2,217 @@
 import Pageheader from '@/shared/layout-components/page-header/pageheader'
 import Seo from '@/shared/layout-components/seo/seo'
 import DataTable from '@/shared/components/DataTable'
-import React, { Fragment, useState } from 'react'
+import React, { Fragment, useState, useEffect } from 'react'
 import Link from 'next/link'
 import DatePicker from 'react-datepicker'
 import Select from 'react-select'
 import "react-datepicker/dist/react-datepicker.css"
+import axios from 'axios'
+import { Base_url } from '@/app/api/config/BaseUrl'
 
 const Products = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
+    const [loading, setLoading] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [formData, setFormData] = useState({
+        name: '',
+        type: '',
+        category: '',
+        description: '',
+        commission: {
+            percentage: 0,
+            minAmount: 0,
+            maxAmount: 0,
+            bonus: 0
+        },
+        pricing: {
+            basePrice: 0,
+            currency: 'INR',
+            discounts: []
+        },
+        subCategory: '',
+        features: [''],
+        terms: [''],
+        eligibility: '',
+        coverage: '',
+        duration: '',
+        interestRate: 0,
+        loanAmount: {
+            min: 0,
+            max: 0
+        },
+        tenure: {
+            min: 0,
+            max: 0
+        },
+        status: 'active',
+        documents: [],
+        images: [],
+        metadata: {}
+    });
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
+    const fetchProducts = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${Base_url}products`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            // Format the data according to table headers
+            const formattedData = response.data.results.map((product: any, index: number) => ({
+                srNo: index + 1,
+                name: product.name || '--',
+                type: product.type || '--',
+                category: product.category || '--',
+                commission: `${product.commission?.percentage || 0}%`,
+                duration: product.duration || '--',
+                status: product.status || '--',
+                actions: [
+                    {
+                        icon: 'ri-eye-line',
+                        className: 'ti-btn-primary',
+                        onClick: () => openProductModal(product.id)
+                    },
+                    {
+                        icon: 'ri-edit-line',
+                        className: 'ti-btn-info',
+                        onClick: () => openUpdateModal(product.id)
+                    },
+                    {
+                        icon: 'ri-delete-bin-line',
+                        className: 'ti-btn-danger',
+                        onClick: () => openDeleteModal(product.id)
+                    }
+                ]
+            }));
+
+            setProducts(formattedData);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        }
+    };
 
     const handleDateChange = (date: Date | null) => {
         setStartDate(date);
     };
 
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        if (name.includes('.')) {
+            const [parent, child] = name.split('.');
+            setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                    ...prev[parent as keyof typeof prev],
+                    [child]: value
+                }
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
+    };
+
+    const handleSelectChange = (name: string, selectedOption: any) => {
+        setFormData(prev => ({
+            ...prev,
+            [name]: selectedOption.value
+        }));
+    };
+
+    const handleArrayInputChange = (index: number, value: string, field: 'features' | 'terms') => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: prev[field].map((item, i) => i === index ? value : item)
+        }));
+    };
+
+    const addArrayItem = (field: 'features' | 'terms') => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: [...prev[field], '']
+        }));
+    };
+
+    const removeArrayItem = (index: number, field: 'features' | 'terms') => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: prev[field].filter((_, i) => i !== index)
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post(`${Base_url}products`, formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            // Reset form and close modal
+            setFormData({
+                name: '',
+                type: '',
+                category: '',
+                description: '',
+                commission: {
+                    percentage: 0,
+                    minAmount: 0,
+                    maxAmount: 0,
+                    bonus: 0
+                },
+                pricing: {
+                    basePrice: 0,
+                    currency: 'INR',
+                    discounts: []
+                },
+                subCategory: '',
+                features: [''],
+                terms: [''],
+                eligibility: '',
+                coverage: '',
+                duration: '',
+                interestRate: 0,
+                loanAmount: {
+                    min: 0,
+                    max: 0
+                },
+                tenure: {
+                    min: 0,
+                    max: 0
+                },
+                status: 'active',
+                documents: [],
+                images: [],
+                metadata: {}
+            });
+            const modal = document.getElementById('create-product');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            // Refresh products list
+            fetchProducts();
+        } catch (error) {
+            console.error('Error creating product:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const StatusOptions = [
         { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' }
+        { value: 'inactive', label: 'Inactive' },
+        { value: 'draft', label: 'Draft' }
     ];
 
     const TypeOptions = [
@@ -34,269 +229,6 @@ const Products = () => {
         { key: 'duration', label: 'Duration' },
         { key: 'status', label: 'Status' },
         { key: 'actions', label: 'Actions' }
-    ];
-
-    const tableData = [
-        {
-            srNo: 1,
-            name: 'Term Life Insurance',
-            type: 'Insurance',
-            category: 'Life Insurance',
-            commission: '15%',
-            duration: '20 Years',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 2,
-            name: 'Health Shield Plus',
-            type: 'Insurance',
-            category: 'Health Insurance',
-            commission: '12%',
-            duration: '1 Year',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 3,
-            name: 'Auto Secure',
-            type: 'Insurance',
-            category: 'Motor Insurance',
-            commission: '10%',
-            duration: '1 Year',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 4,
-            name: 'Home Shield',
-            type: 'Insurance',
-            category: 'Property Insurance',
-            commission: '8%',
-            duration: '1 Year',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 5,
-            name: 'Car Loan Prime',
-            type: 'Banking',
-            category: 'Car Loan',
-            commission: '1.5%',
-            duration: '5 Years',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 6,
-            name: 'Home Loan Plus',
-            type: 'Banking',
-            category: 'Home Loan',
-            commission: '1%',
-            duration: '20 Years',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 7,
-            name: 'Business Growth Loan',
-            type: 'Banking',
-            category: 'Business Loan',
-            commission: '2%',
-            duration: '7 Years',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 8,
-            name: 'MSME Support',
-            type: 'Banking',
-            category: 'MSME Loan',
-            commission: '1.8%',
-            duration: '5 Years',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 9,
-            name: 'Travel Guard',
-            type: 'Insurance',
-            category: 'Travel Insurance',
-            commission: '10%',
-            duration: '1 Year',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        },
-        {
-            srNo: 10,
-            name: 'Education Loan',
-            type: 'Banking',
-            category: 'Education Loan',
-            commission: '1.2%',
-            duration: '10 Years',
-            status: 'Active',
-            actions: [
-                {
-                    icon: 'ri-eye-line',
-                    className: 'ti-btn-primary',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-edit-line',
-                    className: 'ti-btn-info',
-                    href: '#'
-                },
-                {
-                    icon: 'ri-delete-bin-line',
-                    className: 'ti-btn-danger',
-                    href: '#'
-                }
-            ]
-        }
     ];
 
     return (
@@ -324,67 +256,210 @@ const Products = () => {
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <div className="ti-modal-body">
-                                                <div className="grid grid-cols-12 gap-2">
-                                                    <div className="xl:col-span-6 col-span-12">
-                                                        <label htmlFor="name" className="form-label">Product Name</label>
-                                                        <input type="text" className="form-control" id="name" placeholder="Enter Product Name" />
-                                                    </div>
-                                                    <div className="xl:col-span-6 col-span-12">
-                                                        <label className="form-label">Type</label>
-                                                        <Select
-                                                            id="type-select"
-                                                            name="type"
-                                                            options={TypeOptions}
-                                                            className=""
-                                                            menuPlacement='auto'
-                                                            classNamePrefix="Select2"
-                                                            placeholder="Select Type"
-                                                            defaultValue={TypeOptions[0]}
-                                                        />
-                                                    </div>
-                                                    <div className="xl:col-span-6 col-span-12">
-                                                        <label htmlFor="category" className="form-label">Category</label>
-                                                        <input type="text" className="form-control" id="category" placeholder="Enter Category" />
-                                                    </div>
-                                                    <div className="xl:col-span-6 col-span-12">
-                                                        <label htmlFor="commission" className="form-label">Commission</label>
-                                                        <input type="text" className="form-control" id="commission" placeholder="Enter Commission" />
-                                                    </div>
-                                                    <div className="xl:col-span-6 col-span-12">
-                                                        <label htmlFor="duration" className="form-label">Duration</label>
-                                                        <input type="text" className="form-control" id="duration" placeholder="Enter Duration" />
-                                                    </div>
-                                                    <div className="xl:col-span-6 col-span-12">
-                                                        <label className="form-label">Status</label>
-                                                        <Select
-                                                            id="status-select"
-                                                            name="status"
-                                                            options={StatusOptions}
-                                                            className=""
-                                                            menuPlacement='auto'
-                                                            classNamePrefix="Select2"
-                                                            placeholder="Select Status"
-                                                            defaultValue={StatusOptions[0]}
-                                                        />
+                                            <form onSubmit={handleSubmit}>
+                                                <div className="ti-modal-body">
+                                                    <div className="grid grid-cols-12 gap-2">
+                                                        {/* Required Fields */}
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="name" className="form-label">Product Name *</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-control"
+                                                                id="name"
+                                                                name="name"
+                                                                value={formData.name}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Product Name"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label className="form-label">Type *</label>
+                                                            <Select
+                                                                id="type-select"
+                                                                name="type"
+                                                                options={TypeOptions}
+                                                                onChange={(option) => handleSelectChange('type', option)}
+                                                                className=""
+                                                                menuPlacement='auto'
+                                                                classNamePrefix="Select2"
+                                                                placeholder="Select Type"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="category" className="form-label">Category *</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-control"
+                                                                id="category"
+                                                                name="category"
+                                                                value={formData.category}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Category"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="description" className="form-label">Description *</label>
+                                                            <textarea
+                                                                className="form-control"
+                                                                id="description"
+                                                                name="description"
+                                                                value={formData.description}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Description"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="commission.percentage" className="form-label">Commission Percentage *</label>
+                                                            <input
+                                                                type="number"
+                                                                className="form-control"
+                                                                id="commission.percentage"
+                                                                name="commission.percentage"
+                                                                value={formData.commission.percentage}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Commission Percentage"
+                                                                min="0"
+                                                                max="100"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="pricing.basePrice" className="form-label">Base Price *</label>
+                                                            <input
+                                                                type="number"
+                                                                className="form-control"
+                                                                id="pricing.basePrice"
+                                                                name="pricing.basePrice"
+                                                                value={formData.pricing.basePrice}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Base Price"
+                                                                min="0"
+                                                                required
+                                                            />
+                                                        </div>
+
+                                                        {/* Optional Fields */}
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="subCategory" className="form-label">Sub Category</label>
+                                                            <input
+                                                                type="text"
+                                                                className="form-control"
+                                                                id="subCategory"
+                                                                name="subCategory"
+                                                                value={formData.subCategory}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Sub Category"
+                                                            />
+                                                        </div>
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label htmlFor="eligibility" className="form-label">Eligibility</label>
+                                                            <textarea
+                                                                className="form-control"
+                                                                id="eligibility"
+                                                                name="eligibility"
+                                                                value={formData.eligibility}
+                                                                onChange={handleInputChange}
+                                                                placeholder="Enter Eligibility Criteria"
+                                                            />
+                                                        </div>
+
+                                                        {/* Features Array */}
+                                                        <div className="col-span-12">
+                                                            <label className="form-label">Features</label>
+                                                            {formData.features.map((feature, index) => (
+                                                                <div key={index} className="flex gap-2 mb-2">
+                                                                    <input
+                                                                        type="text"
+                                                                        className="form-control"
+                                                                        value={feature}
+                                                                        onChange={(e) => handleArrayInputChange(index, e.target.value, 'features')}
+                                                                        placeholder="Enter Feature"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        className="ti-btn ti-btn-danger"
+                                                                        onClick={() => removeArrayItem(index, 'features')}
+                                                                    >
+                                                                        <i className="ri-delete-bin-line"></i>
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            <button
+                                                                type="button"
+                                                                className="ti-btn ti-btn-light"
+                                                                onClick={() => addArrayItem('features')}
+                                                            >
+                                                                Add Feature
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Terms Array */}
+                                                        <div className="col-span-12">
+                                                            <label className="form-label">Terms</label>
+                                                            {formData.terms.map((term, index) => (
+                                                                <div key={index} className="flex gap-2 mb-2">
+                                                                    <input
+                                                                        type="text"
+                                                                        className="form-control"
+                                                                        value={term}
+                                                                        onChange={(e) => handleArrayInputChange(index, e.target.value, 'terms')}
+                                                                        placeholder="Enter Term"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        className="ti-btn ti-btn-danger"
+                                                                        onClick={() => removeArrayItem(index, 'terms')}
+                                                                    >
+                                                                        <i className="ri-delete-bin-line"></i>
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            <button
+                                                                type="button"
+                                                                className="ti-btn ti-btn-light"
+                                                                onClick={() => addArrayItem('terms')}
+                                                            >
+                                                                Add Term
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Status */}
+                                                        <div className="xl:col-span-6 col-span-12">
+                                                            <label className="form-label">Status</label>
+                                                            <Select
+                                                                id="status-select"
+                                                                name="status"
+                                                                options={StatusOptions}
+                                                                onChange={(option) => handleSelectChange('status', option)}
+                                                                className=""
+                                                                menuPlacement='auto'
+                                                                classNamePrefix="Select2"
+                                                                placeholder="Select Status"
+                                                                defaultValue={StatusOptions[0]}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="ti-modal-footer">
-                                                <button type="button" className="hs-dropdown-toggle ti-btn ti-btn-light" data-hs-overlay="#create-product">
-                                                    Cancel
-                                                </button>
-                                                <Link className="ti-btn ti-btn-primary-full" href="#!" scroll={false}>
-                                                    Add Product
-                                                </Link>
-                                            </div>
+                                                <div className="ti-modal-footer">
+                                                    <button type="button" className="hs-dropdown-toggle ti-btn ti-btn-light" data-hs-overlay="#create-product">
+                                                        Cancel
+                                                    </button>
+                                                    <button type="submit" className="ti-btn ti-btn-primary-full" disabled={loading}>
+                                                        {loading ? 'Creating...' : 'Add Product'}
+                                                    </button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div className="box-body">
-                            <DataTable headers={headers} data={tableData} />
+                            <DataTable headers={headers} data={products} />
                         </div>
                     </div>
                 </div>
