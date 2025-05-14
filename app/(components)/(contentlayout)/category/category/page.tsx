@@ -171,11 +171,11 @@ const Category = () => {
     ];
 
     const headers = [
-        { key: 'category', label: 'Category' },
-        { key: 'subcategoryCount', label: 'Subcategories' },
-        { key: 'createdDate', label: 'Created Date' },
-        { key: 'status', label: 'Status' },
-        { key: 'actions', label: 'Actions' }
+        { key: 'category', label: 'Category' ,sortable: false},
+        { key: 'subcategoryCount', label: 'Subcategories' ,sortable: false},
+        { key: 'createdDate', label: 'Created Date' ,sortable: false},
+        { key: 'status', label: 'Status' ,sortable: false},
+        { key: 'actions', label: 'Actions' ,sortable: false}
     ];
 
     return (

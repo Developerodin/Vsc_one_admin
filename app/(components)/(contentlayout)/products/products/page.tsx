@@ -9,8 +9,10 @@ import Select from 'react-select'
 import "react-datepicker/dist/react-datepicker.css"
 import axios from 'axios'
 import { Base_url } from '@/app/api/config/BaseUrl'
+import { useRouter } from 'next/navigation'
 
 const Products = () => {
+    const router = useRouter();
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState([]);
@@ -75,7 +77,6 @@ const Products = () => {
 
             // Format the data according to table headers
             const formattedData = response.data.results.map((product: any, index: number) => ({
-                srNo: index + 1,
                 name: product.name || '--',
                 type: product.type || '--',
                 category: product.categories?.[0] || '--',
@@ -231,14 +232,13 @@ const Products = () => {
     ];
 
     const headers = [
-        { key: 'srNo', label: 'Sr No.' },
-        { key: 'name', label: 'Name' },
-        { key: 'type', label: 'Type' },
-        { key: 'category', label: 'Category' },
-        { key: 'commission', label: 'Commission' },
-        { key: 'duration', label: 'Duration' },
-        { key: 'status', label: 'Status' },
-        { key: 'actions', label: 'Actions' }
+        { key: 'name', label: 'Name' ,sortable: false},
+        { key: 'type', label: 'Type' ,sortable: false},
+        { key: 'category', label: 'Category' ,sortable: false},
+        { key: 'commission', label: 'Commission' ,sortable: false},
+        { key: 'duration', label: 'Duration' ,sortable: false},
+        { key: 'status', label: 'Status' ,sortable: false},
+        { key: 'actions', label: 'Actions' ,sortable: false}
     ];
 
     return (
@@ -251,7 +251,11 @@ const Products = () => {
                         <div className="box-header">
                             <h5 className="box-title">Products List</h5>
                             <div className="flex">
-                                <button type="button" className="hs-dropdown-toggle ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]" data-hs-overlay="#create-product">
+                                <button 
+                                    type="button" 
+                                    className="hs-dropdown-toggle ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
+                                    onClick={() => router.push('/products/create')}
+                                >
                                     <i className="ri-add-line font-semibold align-middle"></i> Create Product
                                 </button>
                                 <div id="create-product" className="hs-overlay hidden ti-modal">

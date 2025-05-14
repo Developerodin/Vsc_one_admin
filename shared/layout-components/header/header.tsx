@@ -481,7 +481,7 @@ const Header = ({ local_varaiable, ThemeChanger }:any) => {
                   </div>
                 </div>
               </div> */}
-              <div className="header-element header-theme-mode hidden !items-center sm:block !py-[1rem] md:!px-[0.65rem] px-2" onClick={() => ToggleDark()}>
+              {/* <div className="header-element header-theme-mode hidden !items-center sm:block !py-[1rem] md:!px-[0.65rem] px-2" onClick={() => ToggleDark()}>
                 <button aria-label="anchor"
                   className="hs-dark-mode-active:hidden flex hs-dark-mode group flex-shrink-0 justify-center items-center gap-2  rounded-full font-medium transition-all text-xs dark:hover:bg-black/20 dark:text-[#8c9097] dark:text-white/50 dark:hover:text-white dark:focus:ring-white/10 dark:focus:ring-offset-white/10"
                    data-hs-theme-click-value="dark">
@@ -492,7 +492,7 @@ const Header = ({ local_varaiable, ThemeChanger }:any) => {
                   data-hs-theme-click-value="light">
                   <i className="bx bx-sun header-link-icon"></i>
                 </button>
-              </div>
+              </div> */}
               {/* <div className="header-element cart-dropdown hs-dropdown ti-dropdown md:!block !hidden py-[1rem] md:px-[0.65rem] px-2 [--placement:bottom-right] rtl:[--placement:bottom-left]">
                 <button id="dropdown-cart" type="button"
                   className="hs-dropdown-toggle relative ti-dropdown-toggle !p-0 !border-0 flex-shrink-0  !rounded-full !shadow-none align-middle text-xs">
@@ -763,8 +763,8 @@ const Header = ({ local_varaiable, ThemeChanger }:any) => {
                     </li>
                     <li><Link className="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0 !p-[0.65rem]" href="#!"><i
                       className="ti ti-clipboard-check text-[1.125rem] me-2 opacity-[0.7] !inline-flex"></i>Task Manager</Link></li> */}
-                    <li><Link className="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0 !p-[0.65rem]" href="#!"><i
-                      className="ti ti-adjustments-horizontal text-[1.125rem] me-2 opacity-[0.7] !inline-flex"></i>Settings</Link></li>
+                    {/* <li><Link className="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0 !p-[0.65rem]" href="#!"><i
+                      className="ti ti-adjustments-horizontal text-[1.125rem] me-2 opacity-[0.7] !inline-flex"></i>Settings</Link></li> */}
                     {/* <li><Link className="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0 !p-[0.65rem] " href="#!" scroll={false}><i
                       className="ti ti-wallet text-[1.125rem] me-2 opacity-[0.7 !inline-flex"></i>Bal: $7,12,950</Link></li>
                     <li><Link className="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex" href="#!"><i
@@ -774,13 +774,13 @@ const Header = ({ local_varaiable, ThemeChanger }:any) => {
                   </ul>
                 </div>
               </div>
-              <div className="header-element md:px-[0.48rem]">
+              {/* <div className="header-element md:px-[0.48rem]">
                 <button aria-label="button" type="button"
                   className="hs-dropdown-toggle switcher-icon inline-flex flex-shrink-0 justify-center items-center gap-2  rounded-full font-medium  align-middle transition-all text-xs dark:text-[#8c9097] dark:text-white/50 dark:hover:text-white dark:focus:ring-white/10 dark:focus:ring-offset-white/10"
                   data-hs-overlay="#hs-overlay-switcher">
                   <i className="bx bx-cog header-link-icon animate-spin-slow"></i>
                 </button>
-              </div>
+              </div> */}
             </div>
           </div>
         </nav>
