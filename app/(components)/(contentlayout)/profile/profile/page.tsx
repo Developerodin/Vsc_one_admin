@@ -25,7 +25,6 @@ const Profile = () => {
                                 <div className="flex-grow main-profile-info">
                                     <div className="flex items-center !justify-between">
                                         <h6 className="font-semibold mb-1 text-white text-[1rem]">Json Taylor</h6>
-                                        <button type="button" className="ti-btn ti-btn-light !font-medium !gap-0"><i className="ri-add-line me-1 align-middle inline-block"></i>Follow</button>
                                     </div>
                                     <p className="mb-1 !text-white  opacity-[0.7]">Chief Executive Officer (C.E.O)</p>
                                     <p className="text-[0.75rem] text-white mb-6 opacity-[0.5]">
@@ -35,16 +34,16 @@ const Profile = () => {
                                     <div className="flex mb-0">
                                         <div className="me-6">
                                             <p className="font-bold text-[1.25rem] text-white text-shadow mb-0">113</p>
-                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Projects</p>
+                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Commissiona</p>
                                         </div>
                                         <div className="me-6">
                                             <p className="font-bold text-[1.25rem] text-white text-shadow mb-0">12.2k</p>
-                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Followers</p>
+                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Leads</p>
                                         </div>
-                                        <div className="me-6">
+                                        {/* <div className="me-6">
                                             <p className="font-bold text-[1.25rem] text-white text-shadow mb-0">128</p>
-                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Following</p>
-                                        </div>
+                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Leads</p>
+                                        </div> */}
                                     </div>
                                 </div>
                             </div>
@@ -121,26 +120,6 @@ const Profile = () => {
                                     ))}
                                 </div>
                             </div>
-                            <div className="p-6">
-                                <p className="text-[.9375rem] mb-2 me-6 font-semibold">Followers :</p>
-                                <ul className="list-group">
-                                    {Followersdata.map((idx)=>(
-
-                                    <li className="list-group-item" key={Math.random()}>
-                                        <div className="sm:flex items-start">
-                                            <span className="avatar avatar-sm">
-                                                <img src={idx.src} alt="img" className="rounded-md" />
-                                            </span>
-                                            <div className="sm:ms-2 ms-0 sm:mt-0 mt-1 font-semibold flex-grow">
-                                                <p className="mb-0 leading-none">{idx.name}</p>
-                                                <span className="text-[.6875rem] text-[#8c9097] dark:text-white/50 opacity-[0.7]">{idx.mail}</span>
-                                            </div>
-                                            <button type="button" className="ti-btn ti-btn-light !py-1 !px-2 !text-[0.75rem]">Follow</button>
-                                        </div>
-                                    </li>
-                                    ))}
-                                </ul>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -154,9 +133,9 @@ const Profile = () => {
                                             <Link className="w-full sm:w-auto flex active hs-tab-active:font-semibold  hs-tab-active:text-white hs-tab-active:bg-primary rounded-md py-2 px-4 text-primary text-sm" href="#!" scroll={false} id="activity-tab" data-hs-tab="#activity-tab-pane" aria-controls="activity-tab-pane">
                                                 <i className="ri-gift-line  align-middle inline-block me-1"></i>Activity
                                             </Link>
-                                            <Link className="w-full sm:w-auto flex hs-tab-active:font-semibold  hs-tab-active:text-white hs-tab-active:bg-primary rounded-md  py-2 px-4 text-primary text-sm" href="#!" scroll={false} id="posts-tab" data-hs-tab="#posts-tab-pane" aria-controls="posts-tab-pane">
+                                            {/* <Link className="w-full sm:w-auto flex hs-tab-active:font-semibold  hs-tab-active:text-white hs-tab-active:bg-primary rounded-md  py-2 px-4 text-primary text-sm" href="#!" scroll={false} id="posts-tab" data-hs-tab="#posts-tab-pane" aria-controls="posts-tab-pane">
                                                 <i className="ri-bill-line me-1 align-middle inline-block"></i>Posts
-                                            </Link>
+                                            </Link> */}
                                             <Link className="w-full sm:w-auto flex hs-tab-active:font-semibold  hs-tab-active:text-white hs-tab-active:bg-primary rounded-md  py-2 px-4 text-primary text-sm" href="#!" scroll={false} id="followers-tab" data-hs-tab="#followers-tab-pane" aria-controls="followers-tab-pane">
                                                 <i className="ri-money-dollar-box-line me-1 align-middle inline-block"></i>Friends
                                             </Link>
@@ -730,97 +709,7 @@ const Profile = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="xl:col-span-4 col-span-12">
-                            <div className="box">
-                                <div className="box-header">
-                                    <div className="box-title">
-                                        Personal Info
-                                    </div>
-                                </div>
-                                <div className="box-body">
-                                    <ul className="list-group">
-                                        {Personalinfodata.map((idx)=>(
-
-                                        <li className="list-group-item" key={Math.random()}>
-                                            <div className="flex flex-wrap items-center">
-                                                <div className="me-2 font-semibold">
-                                                    {idx.text1}
-                                                </div>
-                                                <span className="text-[0.75rem] text-[#8c9097] dark:text-white/50">{idx.text2}</span>
-                                            </div>
-                                        </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="xl:col-span-4 col-span-12">
-                            <div className="box">
-                                <div className="box-header flex justify-between">
-                                    <div className="box-title">
-                                        Recent Posts
-                                    </div>
-                                    <div>
-                                        <span className="badge bg-primary/10 text-primary">Today</span>
-                                    </div>
-                                </div>
-                                <div className="box-body">
-                                    <ul className="list-group">
-                                        {RecentPostsdata.map((idx)=>(
-
-                                        <li className="list-group-item" key={Math.random()}>
-                                            <Link href="#!" scroll={false}>
-                                                <div className="flex flex-wrap items-center">
-                                                    <span className="avatar avatar-md me-4 !mb-0">
-                                                        <img src={idx.src} className="img-fluid !rounded-md" alt="..." />
-                                                    </span>
-                                                    <div className="flex-grow">
-                                                        <p className="font-semibold mb-0">{idx.name}</p>
-                                                        <p className="mb-0 text-[0.75rem] profile-recent-posts text-truncate text-[#8c9097] dark:text-white/50">
-                                                            {idx.text}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </Link>
-                                        </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="xl:col-span-4 col-span-12">
-                            <div className="box">
-                                <div className="box-header flex justify-between">
-                                    <div className="box-title">
-                                        Suggestions
-                                    </div>
-                                    <div>
-                                        <button type="button" className="ti-btn !py-1 !px-2 !text-[0.75rem] !font-medium ti-btn-success">View All</button>
-                                    </div>
-                                </div>
-                                <div className="box-body">
-                                    <ul className="list-group">
-                                        {Suggestionsdata.map((idx) =>(
-
-                                        <li className="list-group-item" key={Math.random()}>
-                                            <div className="flex items-center justify-between">
-                                                <div className="font-semibold flex items-center">
-                                                    <span className="avatar avatar-xs me-2">
-                                                        <img src={idx.src} alt="" />
-                                                    </span>{idx.name}
-                                                </div>
-                                                <div>
-                                                    <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-primary !mb-0">
-                                                        <i className="ri-add-line"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+                       
                     </div>
                 </div>
             </div>
