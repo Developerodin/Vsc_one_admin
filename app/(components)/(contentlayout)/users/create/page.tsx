@@ -12,10 +12,12 @@ interface FormData {
   // General Information
   name: string;
   email: string;
+  password: string;
   mobileNumber: string;
   role: string;
   status: string;
   profilePicture: File | null;
+  onboardingStatus: string;
   
   // Address
   address: {
@@ -27,14 +29,22 @@ interface FormData {
   };
   
   // KYC Details
+  kycStatus: string;
   kycDetails: {
     aadhaarNumber: string;
+    aadhaarVerified: boolean;
+    aadhaarVerificationDate: Date | null;
     panNumber: string;
-    kycStatus: string;
+    panVerified: boolean;
+    panVerificationDate: Date | null;
     documents: Array<{
       type: string;
       url: string;
       verified: boolean;
+      verifiedBy: string | null;
+      verifiedAt: Date | null;
+      rejectionReason: string;
+      uploadedAt: Date;
     }>;
   };
   
@@ -60,9 +70,18 @@ interface FormData {
     expiresAt: Date | null;
     verified: boolean;
   };
+  otp: {
+    code: string;
+    expiresAt: Date | null;
+    attempts: number;
+  };
   
   // Metadata
-  metadata: Record<string, any>;
+  metadata: {
+    notes?: string;
+    description?: string;
+    [key: string]: any;
+  };
 }
 
 const CreateUser = () => {
@@ -72,10 +91,12 @@ const CreateUser = () => {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
+    password: "",
     mobileNumber: "",
     role: "user",
     status: "pending",
     profilePicture: null,
+    onboardingStatus: "pending",
     address: {
       street: "",
       city: "",
@@ -83,10 +104,14 @@ const CreateUser = () => {
       pincode: "",
       country: "India"
     },
+    kycStatus: "pending",
     kycDetails: {
       aadhaarNumber: "",
+      aadhaarVerified: false,
+      aadhaarVerificationDate: null,
       panNumber: "",
-      kycStatus: "pending",
+      panVerified: false,
+      panVerificationDate: null,
       documents: []
     },
     bankAccounts: [],
@@ -106,7 +131,15 @@ const CreateUser = () => {
       expiresAt: null,
       verified: false
     },
-    metadata: {}
+    otp: {
+      code: "",
+      expiresAt: null,
+      attempts: 0
+    },
+    metadata: {
+      notes: "",
+      description: ""
+    }
   });
 
   const tabs = [
@@ -185,6 +218,15 @@ const CreateUser = () => {
                       />
                     </div>
                     <div className="col-span-6">
+                      <label className="form-label">Password</label>
+                      <input
+                        type="password"
+                        className="form-control"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-span-6">
                       <label className="form-label">Mobile Number</label>
                       <input
                         type="tel"
@@ -210,10 +252,24 @@ const CreateUser = () => {
                         options={[
                           { value: 'pending', label: 'Pending' },
                           { value: 'active', label: 'Active' },
-                          { value: 'inactive', label: 'Inactive' }
+                          { value: 'inactive', label: 'Inactive' },
+                          { value: 'suspended', label: 'Suspended' }
                         ]}
                         value={{ value: formData.status, label: formData.status.charAt(0).toUpperCase() + formData.status.slice(1) }}
                         onChange={(option) => setFormData({...formData, status: option?.value || 'pending'})}
+                      />
+                    </div>
+                    <div className="col-span-6">
+                      <label className="form-label">Onboarding Status</label>
+                      <Select
+                        options={[
+                          { value: 'pending', label: 'Pending' },
+                          { value: 'in_progress', label: 'In Progress' },
+                          { value: 'completed', label: 'Completed' },
+                          { value: 'rejected', label: 'Rejected' }
+                        ]}
+                        value={{ value: formData.onboardingStatus, label: formData.onboardingStatus.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') }}
+                        onChange={(option) => setFormData({...formData, onboardingStatus: option?.value || 'pending'})}
                       />
                     </div>
                     <div className="col-span-6">
@@ -293,7 +349,354 @@ const CreateUser = () => {
                     </div>
                   </div>
                 )}
-                {/* Add other tab content */}
+                {activeTab === 2 && (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-6">
+                      <label className="form-label">KYC Status</label>
+                      <Select
+                        options={[
+                          { value: 'pending', label: 'Pending' },
+                          { value: 'verified', label: 'Verified' },
+                          { value: 'rejected', label: 'Rejected' }
+                        ]}
+                        value={{ value: formData.kycStatus, label: formData.kycStatus.charAt(0).toUpperCase() + formData.kycStatus.slice(1) }}
+                        onChange={(option) => setFormData({...formData, kycStatus: option?.value || 'pending'})}
+                      />
+                    </div>
+                    <div className="col-span-6">
+                      <label className="form-label">Aadhaar Number</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={formData.kycDetails.aadhaarNumber}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          kycDetails: {...formData.kycDetails, aadhaarNumber: e.target.value}
+                        })}
+                      />
+                    </div>
+                    <div className="col-span-6">
+                      <label className="form-label">PAN Number</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={formData.kycDetails.panNumber}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          kycDetails: {...formData.kycDetails, panNumber: e.target.value}
+                        })}
+                      />
+                    </div>
+                    <div className="col-span-12">
+                      <label className="form-label">Documents</label>
+                      <div className="space-y-4">
+                        {formData.kycDetails.documents.map((doc, index) => (
+                          <div key={index} className="grid grid-cols-12 gap-4">
+                            <div className="col-span-4">
+                              <Select
+                                options={[
+                                  { value: 'aadhaar', label: 'Aadhaar' },
+                                  { value: 'pan', label: 'PAN' },
+                                  { value: 'addressProof', label: 'Address Proof' },
+                                  { value: 'photo', label: 'Photo' },
+                                  { value: 'other', label: 'Other' }
+                                ]}
+                                value={{ value: doc.type, label: doc.type.charAt(0).toUpperCase() + doc.type.slice(1) }}
+                                onChange={(option) => {
+                                  const newDocs = [...formData.kycDetails.documents];
+                                  newDocs[index] = {...doc, type: option?.value || 'other'};
+                                  setFormData({
+                                    ...formData,
+                                    kycDetails: {...formData.kycDetails, documents: newDocs}
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div className="col-span-4">
+                              <input
+                                type="file"
+                                className="form-control"
+                                onChange={(e) => {
+                                  const newDocs = [...formData.kycDetails.documents];
+                                  newDocs[index] = {...doc, url: e.target.files?.[0]?.name || ''};
+                                  setFormData({
+                                    ...formData,
+                                    kycDetails: {...formData.kycDetails, documents: newDocs}
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div className="col-span-4">
+                              <button
+                                type="button"
+                                className="ti-btn ti-btn-danger"
+                                onClick={() => {
+                                  const newDocs = formData.kycDetails.documents.filter((_, i) => i !== index);
+                                  setFormData({
+                                    ...formData,
+                                    kycDetails: {...formData.kycDetails, documents: newDocs}
+                                  });
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="ti-btn ti-btn-primary"
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              kycDetails: {
+                                ...formData.kycDetails,
+                                documents: [...formData.kycDetails.documents, {
+                                  type: 'other',
+                                  url: '',
+                                  verified: false,
+                                  verifiedBy: null,
+                                  verifiedAt: null,
+                                  rejectionReason: '',
+                                  uploadedAt: new Date()
+                                }]
+                              }
+                            });
+                          }}
+                        >
+                          Add Document
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {activeTab === 3 && (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-12">
+                      <label className="form-label">Bank Accounts</label>
+                      <div className="space-y-4">
+                        {formData.bankAccounts.map((account, index) => (
+                          <div key={index} className="grid grid-cols-12 gap-4">
+                            <div className="col-span-10">
+                              <input
+                                type="text"
+                                className="form-control"
+                                value={account}
+                                onChange={(e) => {
+                                  const newAccounts = [...formData.bankAccounts];
+                                  newAccounts[index] = e.target.value;
+                                  setFormData({...formData, bankAccounts: newAccounts});
+                                }}
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <button
+                                type="button"
+                                className="ti-btn ti-btn-danger"
+                                onClick={() => {
+                                  const newAccounts = formData.bankAccounts.filter((_, i) => i !== index);
+                                  setFormData({...formData, bankAccounts: newAccounts});
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="ti-btn ti-btn-primary"
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              bankAccounts: [...formData.bankAccounts, '']
+                            });
+                          }}
+                        >
+                          Add Bank Account
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {activeTab === 4 && (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-6">
+                      <label className="form-label">Total Commission</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={formData.totalCommission}
+                        onChange={(e) => setFormData({...formData, totalCommission: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="col-span-6">
+                      <label className="form-label">Total Leads</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={formData.totalLeads}
+                        onChange={(e) => setFormData({...formData, totalLeads: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="col-span-6">
+                      <label className="form-label">Total Sales</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={formData.totalSales}
+                        onChange={(e) => setFormData({...formData, totalSales: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="col-span-6">
+                      <label className="form-label">Last Login</label>
+                      <input
+                        type="datetime-local"
+                        className="form-control"
+                        value={formData.lastLogin ? new Date(formData.lastLogin).toISOString().slice(0, 16) : ''}
+                        onChange={(e) => setFormData({...formData, lastLogin: e.target.value ? new Date(e.target.value) : null})}
+                      />
+                    </div>
+                  </div>
+                )}
+                {activeTab === 5 && (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-6">
+                      <label className="form-label">Email Verification</label>
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            className="form-checkbox"
+                            checked={formData.isEmailVerified}
+                            onChange={(e) => setFormData({...formData, isEmailVerified: e.target.checked})}
+                          />
+                          <span className="ml-2">Email Verified</span>
+                        </div>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Verification Token"
+                          value={formData.emailVerification.token}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            emailVerification: {...formData.emailVerification, token: e.target.value}
+                          })}
+                        />
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          value={formData.emailVerification.expiresAt ? new Date(formData.emailVerification.expiresAt).toISOString().slice(0, 16) : ''}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            emailVerification: {...formData.emailVerification, expiresAt: e.target.value ? new Date(e.target.value) : null}
+                          })}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-span-6">
+                      <label className="form-label">Mobile Verification</label>
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            className="form-checkbox"
+                            checked={formData.isMobileVerified}
+                            onChange={(e) => setFormData({...formData, isMobileVerified: e.target.checked})}
+                          />
+                          <span className="ml-2">Mobile Verified</span>
+                        </div>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Verification Token"
+                          value={formData.mobileVerification.token}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            mobileVerification: {...formData.mobileVerification, token: e.target.value}
+                          })}
+                        />
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          value={formData.mobileVerification.expiresAt ? new Date(formData.mobileVerification.expiresAt).toISOString().slice(0, 16) : ''}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            mobileVerification: {...formData.mobileVerification, expiresAt: e.target.value ? new Date(e.target.value) : null}
+                          })}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-span-12">
+                      <label className="form-label">OTP Details</label>
+                      <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-4">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="OTP Code"
+                            value={formData.otp.code}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              otp: {...formData.otp, code: e.target.value}
+                            })}
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <input
+                            type="datetime-local"
+                            className="form-control"
+                            value={formData.otp.expiresAt ? new Date(formData.otp.expiresAt).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              otp: {...formData.otp, expiresAt: e.target.value ? new Date(e.target.value) : null}
+                            })}
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <input
+                            type="number"
+                            className="form-control"
+                            placeholder="Attempts"
+                            value={formData.otp.attempts}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              otp: {...formData.otp, attempts: Number(e.target.value)}
+                            })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {activeTab === 6 && (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-12">
+                      <label className="form-label">Additional Notes</label>
+                      <textarea
+                        className="form-control"
+                        rows={4}
+                        value={formData.metadata.notes || ''}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          metadata: {...formData.metadata, notes: e.target.value}
+                        })}
+                      />
+                    </div>
+                    <div className="col-span-12">
+                      <label className="form-label">Description</label>
+                      <textarea
+                        className="form-control"
+                        rows={4}
+                        value={formData.metadata.description || ''}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          metadata: {...formData.metadata, description: e.target.value}
+                        })}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end mt-4 space-x-2">
                 <button
@@ -305,7 +708,7 @@ const CreateUser = () => {
                 </button>
                 <button
                   type="button"
-                  className="ti-btn ti-btn-primary"
+                   className="hs-dropdown-toggle ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
                   onClick={handleSubmit}
                   disabled={loading}
                 >
