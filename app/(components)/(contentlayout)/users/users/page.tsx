@@ -2,6 +2,7 @@
 import Pageheader from "@/shared/layout-components/page-header/pageheader";
 import Seo from "@/shared/layout-components/seo/seo";
 import DataTable from "@/shared/components/DataTable";
+import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import React, { Fragment, useState, useEffect } from "react";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
@@ -621,4 +622,11 @@ const Users = () => {
   );
 };
 
-export default Users;
+// Wrap the Users component with ProtectedRoute
+export default function ProtectedUsers() {
+    return (
+        <ProtectedRoute>
+            <Users />
+        </ProtectedRoute>
+    );
+}

@@ -72,6 +72,7 @@ const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '' }) 
                 meta: {
                     className: header.className || '',
                 },
+                enableSorting: header.key !== 'actions', // Disable sorting for actions column
             })
         ), [headers]
     );
@@ -95,9 +96,9 @@ const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '' }) 
 
     return (
         <>
-            <div className="mb-4 flex">
+            <div className="mb-4 flex items-center">
                 <select
-                    className="selectpage border me-1"
+                    className="selectpage border"
                     value={table.getState().pagination.pageSize}
                     onChange={e => {
                         table.setPageSize(Number(e.target.value))
@@ -121,16 +122,21 @@ const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '' }) 
                                         key={header.id}
                                         className={`text-start ${(header.column.columnDef as CustomColumnDef<TableRow, any>).meta?.className || ''}`}
                                         onClick={header.column.getToggleSortingHandler()}
+                                        style={{ cursor: header.column.getCanSort() ? 'pointer' : 'default' }}
                                     >
-                                        <Fragment>
+                                        <div className="flex items-center gap-1">
                                             <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
-                                            <span>
-                                                {{
-                                                    asc: <i className="ri-arrow-up-s-line ms-1"></i>,
-                                                    desc: <i className="ri-arrow-down-s-line ms-1"></i>,
-                                                }[header.column.getIsSorted() as string] ?? null}
-                                            </span>
-                                        </Fragment>
+                                            {header.column.getCanSort() && (
+                                                <span className="flex flex-col">
+                                                    {{
+                                                        asc: <i className="ri-arrow-up-s-line text-xs"></i>,
+                                                        desc: <i className="ri-arrow-down-s-line text-xs"></i>,
+                                                    }[header.column.getIsSorted() as string] ?? (
+                                                        <i className="ri-arrow-up-down-line text-xs opacity-50"></i>
+                                                    )}
+                                                </span>
+                                            )}
+                                        </div>
                                     </th>
                                 ))}
                             </tr>

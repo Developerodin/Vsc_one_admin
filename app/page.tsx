@@ -146,19 +146,19 @@ export default function Home() {
                       <input type="text" name="email" className="form-control form-control-lg w-full !rounded-md" id="email" onChange={changeHandler} value={email} placeholder="Enter your email" />
                     </div>
                     <div className="xl:col-span-12 col-span-12 mb-2">
-                      <label htmlFor="signin-password" className="form-label text-default block">Password<Link href="/authentication/reset-password/reset-basic/" className="float-right text-danger">Forget password ?</Link></label>
+                      <label htmlFor="signin-password" className="form-label text-default block">Password</label>
                       <div className="input-group">
                         <input name="password" type={(passwordshow1) ? 'text' : "password"} value={password} onChange={changeHandler} className="form-control  !border-s form-control-lg !rounded-s-md" id="signin-password" placeholder="Enter your password" />
                         <button onClick={() => setpasswordshow1(!passwordshow1)} aria-label="button" className="ti-btn ti-btn-light !rounded-s-none !mb-0" type="button" id="button-addon2"><i className={`${passwordshow1 ? 'ri-eye-line' : 'ri-eye-off-line'} align-middle`}></i></button>
                       </div>
-                      <div className="mt-2">
+                      {/* <div className="mt-2">
                         <div className="form-check !ps-0">
                           <input className="form-check-input" type="checkbox" defaultValue="" id="defaultCheck1" />
                           <label className="form-check-label text-[#8c9097] dark:text-white/50 font-normal" htmlFor="defaultCheck1">
                             Remember password ?
                           </label>
                         </div>
-                      </div>
+                      </div> */}
                     </div>
                     <div className="xl:col-span-12 col-span-12 grid mt-2">
                       <button onClick={Login1} className="ti-btn ti-btn-primary !bg-primary !text-white !font-medium">
@@ -173,7 +173,7 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <div className="text-center">
+                  {/* <div className="text-center">
                     <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mt-4">Dont have an account? <Link href="#!" className="text-primary">Sign Up</Link></p>
                   </div>
                   <div className="text-center my-4 authentication-barrier">
@@ -189,7 +189,7 @@ export default function Home() {
                     <button aria-label="button" type="button" className="ti-btn ti-btn-icon ti-btn-light">
                       <i className="ri-twitter-x-line font-bold text-dark opacity-[0.7]"></i>
                     </button>
-                  </div>
+                  </div> */}
                 </div>
                 <div className="box-body hidden" role="tabpanel" id="pills-with-brand-color-02" aria-labelledby="pills-with-brand-color-item-2">
                   <p className="h5 font-semibold mb-2 text-center">Sign In</p>
