@@ -3,11 +3,47 @@ import { Followersdata, Friendsdata, LightboxGallery, Personalinfodata, RecentPo
 import Pageheader from '@/shared/layout-components/page-header/pageheader'
 import Seo from '@/shared/layout-components/seo/seo'
 import Link from 'next/link'
-import React, { Fragment } from 'react'
+import React, { Fragment, useEffect, useState } from 'react'
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import 'react-perfect-scrollbar/dist/css/styles.css';
+import axios from 'axios';
+import { Base_url } from '@/app/api/config/BaseUrl';
+import { useSearchParams } from 'next/navigation';
 
 const Profile = () => {
+    const searchParams = useSearchParams();
+    const userId = searchParams.get('id');
+    const [userData, setUserData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('activity');
+
+    useEffect(() => {
+        if (userId) {
+            fetchUserDetails();
+        }
+    }, [userId]);
+
+    const fetchUserDetails = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem("token");
+            const response = await axios.get(`${Base_url}users/${userId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            setUserData(response.data);
+        } catch (error) {
+            console.error("Error fetching user details:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return <div>Loading...</div>;
+    }
+
     return (
         <Fragment>
             <Seo title={"Profile"} />
@@ -16,7 +52,7 @@ const Profile = () => {
                 <div className="xxl:col-span-4 xl:col-span-12 col-span-12">
                     <div className="box overflow-hidden">
                         <div className="box-body !p-0">
-                            <div className="sm:flex items-start p-6      main-profile-cover">
+                            <div className="sm:flex items-start p-6 main-profile-cover">
                                 <div>
                                     <span className="avatar avatar-xxl avatar-rounded online me-4">
                                         <img src="../../assets/images/faces/9.jpg" alt="" />
@@ -24,26 +60,21 @@ const Profile = () => {
                                 </div>
                                 <div className="flex-grow main-profile-info">
                                     <div className="flex items-center !justify-between">
-                                        <h6 className="font-semibold mb-1 text-white text-[1rem]">Json Taylor</h6>
+                                        <h6 className="font-semibold mb-1 text-white text-[1rem]">{userData?.name || '--'}</h6>
                                     </div>
-                                    <p className="mb-1 !text-white  opacity-[0.7]">Chief Executive Officer (C.E.O)</p>
+                                    <p className="mb-1 !text-white opacity-[0.7]">{userData?.role || '--'}</p>
                                     <p className="text-[0.75rem] text-white mb-6 opacity-[0.5]">
-                                        <span className="me-4 inline-flex"><i className="ri-building-line me-1 align-middle"></i>Georgia</span>
-                                        <span className="inline-flex"><i className="ri-map-pin-line me-1 align-middle"></i>Washington D.C</span>
+                                        <span className="me-4 inline-flex"><i className="ri-building-line me-1 align-middle"></i>{userData?.address?.country || '--'}</span>
                                     </p>
                                     <div className="flex mb-0">
                                         <div className="me-6">
-                                            <p className="font-bold text-[1.25rem] text-white text-shadow mb-0">113</p>
-                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Commissiona</p>
+                                            <p className="font-bold text-[1.25rem] text-white text-shadow mb-0">{userData?.totalCommission || '0'}</p>
+                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Commission</p>
                                         </div>
                                         <div className="me-6">
-                                            <p className="font-bold text-[1.25rem] text-white text-shadow mb-0">12.2k</p>
+                                            <p className="font-bold text-[1.25rem] text-white text-shadow mb-0">{userData?.totalLeads || '0'}</p>
                                             <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Leads</p>
                                         </div>
-                                        {/* <div className="me-6">
-                                            <p className="font-bold text-[1.25rem] text-white text-shadow mb-0">128</p>
-                                            <p className="mb-0 text-[.6875rem] opacity-[0.5] text-white">Leads</p>
-                                        </div> */}
                                     </div>
                                 </div>
                             </div>
@@ -51,19 +82,8 @@ const Profile = () => {
                                 <div className="mb-6">
                                     <p className="text-[.9375rem] mb-2 font-semibold">Professional Bio :</p>
                                     <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 opacity-[0.7] mb-0">
-                                        I am <b className="text-defaulttextcolor">Sonya Taylor,</b> here by conclude that,i am the founder and managing director of the prestigeous company name laugh at all and acts as the cheif executieve officer of the company.
+                                        I am <b className="text-defaulttextcolor">{userData?.name || '--'},</b> here by conclude that,i am the founder and managing director of the prestigeous company name laugh at all and acts as the cheif executieve officer of the company.
                                     </p>
-                                </div>
-                                <div className="mb-0">
-                                    <p className="text-[.9375rem] mb-2 font-semibold">Links :</p>
-                                    <div className="mb-0">
-                                        <p className="mb-1">
-                                            <Link href="https://www.spruko.com/" target="_blank" className="text-primary"><u>https://www.spruko.com/</u></Link>
-                                        </p>
-                                        <p className="mb-0">
-                                            <Link href="https://themeforest.net/user/spruko/portfolio" target="_blank" className="text-primary"><u>https://themeforest.net/user/ spruko/portfolio</u></Link>
-                                        </p>
-                                    </div>
                                 </div>
                             </div>
                             <div className="p-6 border-b border-dashed dark:border-defaultborder/10">
@@ -73,19 +93,19 @@ const Profile = () => {
                                         <span className="avatar avatar-sm avatar-rounded me-2 bg-light text-[#8c9097] dark:text-white/50">
                                             <i className="ri-mail-line align-middle text-[.875rem] text-[#8c9097] dark:text-white/50"></i>
                                         </span>
-                                        sonyataylor2531@gmail.com
+                                        {userData?.email || '--'}
                                     </p>
                                     <p className="mb-2">
                                         <span className="avatar avatar-sm avatar-rounded me-2 bg-light text-[#8c9097] dark:text-white/50">
                                             <i className="ri-phone-line align-middle text-[.875rem] text-[#8c9097] dark:text-white/50"></i>
                                         </span>
-                                        +(555) 555-1234
+                                        {userData?.mobileNumber || '--'}
                                     </p>
                                     <p className="mb-0">
                                         <span className="avatar avatar-sm avatar-rounded me-2 bg-light text-[#8c9097] dark:text-white/50">
                                             <i className="ri-map-pin-line align-middle text-[.875rem] text-[#8c9097] dark:text-white/50"></i>
                                         </span>
-                                        MIG-1-11, Monroe Street, Georgetown, Washington D.C, USA,20071
+                                        {userData?.address?.country || '--'}
                                     </p>
                                 </div>
                             </div>
@@ -113,7 +133,6 @@ const Profile = () => {
                                 <p className="text-[.9375rem] mb-2 me-6 font-semibold">Skills :</p>
                                 <div>
                                     {Skillsdata.map((idx)=>(
-
                                     <Link href="#!" scroll={false} key={Math.random()}>
                                         <span className="badge bg-light text-[#8c9097] dark:text-white/50 m-1">{idx.text}</span>
                                     </Link>
@@ -130,18 +149,24 @@ const Profile = () => {
                                 <div className="box-body !p-0">
                                     <div className="!p-4 border-b dark:border-defaultborder/10 border-dashed md:flex items-center justify-between">
                                         <nav className="-mb-0.5 sm:flex md:space-x-4 rtl:space-x-reverse pb-2" role='tablist'>
-                                            <Link className="w-full sm:w-auto flex active hs-tab-active:font-semibold  hs-tab-active:text-white hs-tab-active:bg-primary rounded-md py-2 px-4 text-primary text-sm" href="#!" scroll={false} id="activity-tab" data-hs-tab="#activity-tab-pane" aria-controls="activity-tab-pane">
-                                                <i className="ri-gift-line  align-middle inline-block me-1"></i>Activity
-                                            </Link>
-                                            {/* <Link className="w-full sm:w-auto flex hs-tab-active:font-semibold  hs-tab-active:text-white hs-tab-active:bg-primary rounded-md  py-2 px-4 text-primary text-sm" href="#!" scroll={false} id="posts-tab" data-hs-tab="#posts-tab-pane" aria-controls="posts-tab-pane">
-                                                <i className="ri-bill-line me-1 align-middle inline-block"></i>Posts
-                                            </Link> */}
-                                            <Link className="w-full sm:w-auto flex hs-tab-active:font-semibold  hs-tab-active:text-white hs-tab-active:bg-primary rounded-md  py-2 px-4 text-primary text-sm" href="#!" scroll={false} id="followers-tab" data-hs-tab="#followers-tab-pane" aria-controls="followers-tab-pane">
+                                            <button 
+                                                className={`w-full sm:w-auto flex ${activeTab === 'activity' ? 'active hs-tab-active:font-semibold hs-tab-active:text-white hs-tab-active:bg-primary' : ''} rounded-md py-2 px-4 text-primary text-sm`}
+                                                onClick={() => setActiveTab('activity')}
+                                            >
+                                                <i className="ri-gift-line align-middle inline-block me-1"></i>Activity
+                                            </button>
+                                            <button 
+                                                className={`w-full sm:w-auto flex ${activeTab === 'friends' ? 'active hs-tab-active:font-semibold hs-tab-active:text-white hs-tab-active:bg-primary' : ''} rounded-md py-2 px-4 text-primary text-sm`}
+                                                onClick={() => setActiveTab('friends')}
+                                            >
                                                 <i className="ri-money-dollar-box-line me-1 align-middle inline-block"></i>Friends
-                                            </Link>
-                                            <Link className="w-full sm:w-auto flex hs-tab-active:font-semibold  hs-tab-active:text-white hs-tab-active:bg-primary rounded-md  py-2 px-4 text-primary text-sm" href="#!" scroll={false} id="gallery-tab" data-hs-tab="#gallery-tab-pane" aria-controls="gallery-tab-pane">
+                                            </button>
+                                            <button 
+                                                className={`w-full sm:w-auto flex ${activeTab === 'gallery' ? 'active hs-tab-active:font-semibold hs-tab-active:text-white hs-tab-active:bg-primary' : ''} rounded-md py-2 px-4 text-primary text-sm`}
+                                                onClick={() => setActiveTab('gallery')}
+                                            >
                                                 <i className="ri-exchange-box-line me-1 align-middle inline-block"></i>Gallery
-                                            </Link>
+                                            </button>
                                         </nav>
                                         <div>
                                             <p className="font-semibold mb-2">Profile 60% completed - <Link href="#!" scroll={false} className="text-primary text-[0.75rem]">Finish now</Link></p>
@@ -152,6 +177,7 @@ const Profile = () => {
                                     </div>
                                     <div className="!p-4">
                                         <div className="tab-content" id="myTabContent">
+                                            {activeTab === 'activity' && (
                                             <div className="tab-pane show active fade !p-0 !border-0" id="activity-tab-pane"
                                                 role="tabpanel" aria-labelledby="activity-tab">
                                                 <ul className="list-none profile-timeline">
@@ -276,391 +302,9 @@ const Profile = () => {
                                                     </li>
                                                 </ul>
                                             </div>
-                                            <div className="tab-pane fade !p-0 !border-0 hidden !rounded-md" id="posts-tab-pane"
-                                                role="tabpanel" aria-labelledby="posts-tab">
-                                                <ul className="list-group !rounded-md">
-                                                    <li className="list-group-item">
-                                                        <div className="sm:flex items-center leading-none">
-                                                            <div className="me-4">
-                                                                <span className="avatar avatar-md avatar-rounded">
-                                                                    <img src="../../assets/images/faces/9.jpg" alt="" />
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex-grow">
-                                                                <div className="flex">
-                                                                    <input type="text" className="form-control !rounded-e-none !w-full" placeholder="Recipient's username" aria-label="Recipient's username with two button addons" />
-                                                                    <button aria-label="button" className="ti-btn ti-btn-light !rounded-none !mb-0" type="button"><i className="bi bi-emoji-smile"></i></button>
-                                                                    <button aria-label="button" className="ti-btn ti-btn-light !rounded-none !mb-0" type="button"><i className="bi bi-paperclip"></i></button>
-                                                                    <button aria-label="button" className="ti-btn ti-btn-light !rounded-none !mb-0" type="button"><i className="bi bi-camera"></i></button>
-                                                                    <button className="ti-btn bg-primary !mb-0 !rounded-s-none text-white" type="button">Post</button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </li>
-                                                    <li className="list-group-item" id="profile-posts-scroll">
-                                                    <PerfectScrollbar>
-                                                        <div className="grid grid-cols-12 gap-4">
-                                                            <div className="xxl:col-span-12 xl:col-span-12 lg:col-span-12 md:col-span-12 col-span-12">
-                                                                <div className="rounded border dark:border-defaultborder/10">
-                                                                    <div className="p-4 flex items-start flex-wrap">
-                                                                        <div className="me-2">
-                                                                            <span className="avatar avatar-sm avatar-rounded">
-                                                                                <img src="../../assets/images/faces/9.jpg" alt="" />
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex-grow">
-                                                                            <p className="mb-1 font-semibold leading-none">You</p>
-                                                                            <p className="text-[.6875rem] mb-2 text-[#8c9097] dark:text-white/50">24, Dec - 04:32PM</p>
-                                                                            <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
-                                                                            <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mb-4">As opposed to using 'Content here 👌</p>
-                                                                            <div className="flex items-center justify-between md:mb-0 mb-2">
-                                                                                <div>
-                                                                                    <div className="btn-list">
-                                                                                        <button type="button" className="ti-btn ti-btn-primary !me-[.375rem] !py-1 !px-2 !text-[0.75rem] !font-medium btn-wave">
-                                                                                            Comment
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn !me-[.375rem] ti-btn-sm ti-btn-success">
-                                                                                            <i className="ri-thumb-up-line"></i>
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-danger">
-                                                                                            <i className="ri-share-line"></i>
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-start">
-                                                                            <div>
-                                                                                <span className="badge bg-primary/10 text-primary me-2">Fashion</span>
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="hs-dropdown ti-dropdown">
-                                                                                    <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-light" aria-expanded="false">
-                                                                                        <i className="ti ti-dots-vertical"></i>
-                                                                                    </button>
-                                                                                    <ul className="hs-dropdown-menu ti-dropdown-menu hidden">
-                                                                                        <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Delete</Link></li>
-                                                                                        <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Hide</Link></li>
-                                                                                        <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Edit</Link></li>
-                                                                                    </ul>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="xxl:col-span-12 xl:col-span-12 lg:col-span-12 md:col-span-12 col-span-12">
-                                                                <div className="rounded border dark:border-defaultborder/10">
-                                                                    <div className="p-4 flex items-start flex-wrap">
-                                                                        <div className="me-2">
-                                                                            <span className="avatar avatar-sm avatar-rounded">
-                                                                                <img src="../../assets/images/faces/9.jpg" alt="" />
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex-grow">
-                                                                            <p className="mb-1 font-semibold leading-none">You</p>
-                                                                            <p className="text-[.6875rem] mb-2 text-[#8c9097] dark:text-white/50">26, Dec - 12:45PM</p>
-                                                                            <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mb-1">Shared pictures with 4 of friends <span>Hiren,Sasha,Biden,Thara</span>.</p>
-                                                                            <div className="flex leading-none justify-between mb-4">
-                                                                                <div>
-                                                                                    <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                                        <span className="avatar avatar-md me-1">
-                                                                                            <img src="../../assets/images/media/media-52.jpg" alt="" />
-                                                                                        </span>
-                                                                                    </Link>
-                                                                                    <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                                        <span className="avatar avatar-md me-1">
-                                                                                            <img src="../../assets/images/media/media-56.jpg" alt="" />
-                                                                                        </span>
-                                                                                    </Link>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="flex items-center justify-between md:mb-0 mb-2">
-                                                                                <div>
-                                                                                    <div className="btn-list">
-                                                                                        <button type="button" className="ti-btn ti-btn-primary !me-[.375rem] !py-1 !px-2 !text-[0.75rem] !font-medium btn-wave">
-                                                                                            Comment
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn !me-[.375rem] ti-btn-sm ti-btn-success">
-                                                                                            <i className="ri-thumb-up-line"></i>
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-danger">
-                                                                                            <i className="ri-share-line"></i>
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="flex items-start">
-                                                                                <div>
-                                                                                    <span className="badge bg-success/10 text-secondary me-2">Nature</span>
-                                                                                </div>
-                                                                                <div>
-                                                                                    <div className="hs-dropdown ti-dropdown">
-                                                                                        <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-light" aria-expanded="false">
-                                                                                            <i className="ti ti-dots-vertical"></i>
-                                                                                        </button>
-                                                                                        <ul className="hs-dropdown-menu ti-dropdown-menu hidden">
-                                                                                            <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Delete</Link></li>
-                                                                                            <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Hide</Link></li>
-                                                                                            <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Edit</Link></li>
-                                                                                        </ul>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="avatar-list-stacked block mt-4 text-end">
-                                                                                <span className="avatar avatar-xs avatar-rounded">
-                                                                                    <img src="../../assets/images/faces/2.jpg" alt="img" />
-                                                                                </span>
-                                                                                <span className="avatar avatar-xs avatar-rounded">
-                                                                                    <img src="../../assets/images/faces/8.jpg" alt="img" />
-                                                                                </span>
-                                                                                <span className="avatar avatar-xs avatar-rounded">
-                                                                                    <img src="../../assets/images/faces/2.jpg" alt="img" />
-                                                                                </span>
-                                                                                <span className="avatar avatar-xs avatar-rounded">
-                                                                                    <img src="../../assets/images/faces/10.jpg" alt="img" />
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="xxl:col-span-12 xl:col-span-12 lg:col-span-12 md:col-span-12 col-span-12">
-                                                                <div className="rounded border dark:border-defaultborder/10">
-                                                                    <div className="p-4 flex items-start flex-wrap">
-                                                                        <div className="me-2">
-                                                                            <span className="avatar avatar-sm avatar-rounded">
-                                                                                <img src="../../assets/images/faces/9.jpg" alt="" />
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex-grow">
-                                                                            <p className="mb-1 font-semibold leading-none">You</p>
-                                                                            <p className="text-[.6875rem] mb-2 text-[#8c9097] dark:text-white/50">29, Dec - 09:53AM</p>
-                                                                            <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mb-1">Sharing an article that excites me about nature more than what i thought.</p>
-                                                                            <p className="mb-4 profile-post-link">
-                                                                                <Link href="#!" scroll={false} className="text-[0.75rem] text-primary">
-                                                                                    <u>https://www.discovery.com/ nature/caring-for-coral</u>
-                                                                                </Link>
-                                                                            </p>
-                                                                            <div className="flex items-center justify-between md:mb-0 mb-2">
-                                                                                <div>
-                                                                                    <div className="btn-list">
-                                                                                        <button type="button" className="ti-btn ti-btn-primary !me-[.375rem] !py-1 !px-2 !text-[0.75rem] !font-medium btn-wave">
-                                                                                            Comment
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn !me-[.375rem] ti-btn-sm ti-btn-success">
-                                                                                            <i className="ri-thumb-up-line"></i>
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-danger">
-                                                                                            <i className="ri-share-line"></i>
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-start">
-                                                                            <div>
-                                                                                <span className="badge bg-secondary/10 text-secondary me-2">Travel</span>
-                                                                            </div>
-                                                                            <div className="hs-dropdown ti-dropdown">
-                                                                                <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-light" aria-expanded="false">
-                                                                                    <i className="ti ti-dots-vertical"></i>
-                                                                                </button>
-                                                                                <ul className="hs-dropdown-menu ti-dropdown-menu hidden">
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Delete</Link></li>
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Hide</Link></li>
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Edit</Link></li>
-                                                                                </ul>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="xxl:col-span-12 xl:col-span-12 lg:col-span-12 md:col-span-12 col-span-12">
-                                                                <div className="rounded border dark:border-defaultborder/10">
-                                                                    <div className="p-4 flex items-start flex-wrap">
-                                                                        <div className="me-2">
-                                                                            <span className="avatar avatar-sm avatar-rounded">
-                                                                                <img src="../../assets/images/faces/9.jpg" alt="" />
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex-grow">
-                                                                            <p className="mb-1 font-semibold leading-none">You</p>
-                                                                            <p className="text-[.6875rem] mb-2 text-[#8c9097] dark:text-white/50">22, Dec - 11:22PM</p>
-                                                                            <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mb-1">Shared pictures with 3 of your friends <span>Maya,Jacob,Amanda</span>.</p>
-                                                                            <div className="flex leading-none justify-between mb-4">
-                                                                                <div>
-                                                                                    <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                                        <span className="avatar avatar-md me-1">
-                                                                                            <img src="../../assets/images/media/media-40.jpg" alt="" className="rounded-md" />
-                                                                                        </span>
-                                                                                    </Link>
-                                                                                    <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                                        <span className="avatar avatar-md me-1">
-                                                                                            <img src="../../assets/images/media/media-45.jpg" alt="" className="rounded-md" />
-                                                                                        </span>
-                                                                                    </Link>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="flex items-center justify-between md:mb-0 mb-2">
-                                                                                <div>
-                                                                                    <div className="btn-list">
-                                                                                        <button type="button" className="ti-btn ti-btn-primary !me-[.375rem] !py-1 !px-2 !text-[0.75rem] !font-medium btn-wave">
-                                                                                            Comment
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn !me-[.375rem] ti-btn-sm ti-btn-success">
-                                                                                            <i className="ri-thumb-up-line"></i>
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-danger">
-                                                                                            <i className="ri-share-line"></i>
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="flex items-start">
-                                                                                <div>
-                                                                                    <span className="badge bg-success/10 text-secondary me-2">Nature</span>
-                                                                                </div>
-                                                                                <div className="hs-dropdown ti-dropdown">
-                                                                                    <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-light" aria-expanded="false">
-                                                                                        <i className="ti ti-dots-vertical"></i>
-                                                                                    </button>
-                                                                                    <ul className="hs-dropdown-menu ti-dropdown-menu hidden">
-                                                                                        <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Delete</Link></li>
-                                                                                        <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Hide</Link></li>
-                                                                                        <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Edit</Link></li>
-                                                                                    </ul>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="avatar-list-stacked block mt-4 text-end">
-                                                                                <span className="avatar avatar-xs avatar-rounded">
-                                                                                    <img src="../../assets/images/faces/1.jpg" alt="img" />
-                                                                                </span>
-                                                                                <span className="avatar avatar-xs avatar-rounded">
-                                                                                    <img src="../../assets/images/faces/5.jpg" alt="img" />
-                                                                                </span>
-                                                                                <span className="avatar avatar-xs avatar-rounded">
-                                                                                    <img src="../../assets/images/faces/16.jpg" alt="img" />
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="xxl:col-span-12 xl:col-span-12 lg:col-span-12 md:col-span-12 col-span-12">
-                                                                <div className="rounded border dark:border-defaultborder/10">
-                                                                    <div className="p-4 flex items-start flex-wrap">
-                                                                        <div className="me-2">
-                                                                            <span className="avatar avatar-sm avatar-rounded">
-                                                                                <img src="../../assets/images/faces/9.jpg" alt="" />
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex-grow">
-                                                                            <p className="mb-1 font-semibold leading-none">You</p>
-                                                                            <p className="text-[.6875rem] mb-2 text-[#8c9097] dark:text-white/50">18, Dec - 12:28PM</p>
-                                                                            <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mb-1">Followed this author for top class themes with best code you can get in the market.</p>
-                                                                            <p className="mb-4 profile-post-link">
-                                                                                <Link href="#!" scroll={false} className="text-[0.75rem] text-primary">
-                                                                                    <u>https://themeforest.net/user/ spruko/portfolio</u>
-                                                                                </Link>
-                                                                            </p>
-                                                                            <div className="flex items-center justify-between md:mb-0 mb-2">
-                                                                                <div>
-                                                                                    <div className="btn-list">
-                                                                                        <button type="button" className="ti-btn ti-btn-primary !me-[.375rem] !py-1 !px-2 !text-[0.75rem] !font-medium btn-wave">
-                                                                                            Comment
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn !me-[.375rem] ti-btn-sm ti-btn-success">
-                                                                                            <i className="ri-thumb-up-line"></i>
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-danger">
-                                                                                            <i className="ri-share-line"></i>
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-start">
-                                                                            <div>
-                                                                                <span className="badge bg-secondary/10 text-secondary me-2">Travel</span>
-                                                                            </div>
-                                                                            <div className="hs-dropdown ti-dropdown">
-                                                                                <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-light" aria-expanded="false">
-                                                                                    <i className="ti ti-dots-vertical"></i>
-                                                                                </button>
-                                                                                <ul className="hs-dropdown-menu ti-dropdown-menu hidden">
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Delete</Link></li>
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Hide</Link></li>
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Edit</Link></li>
-                                                                                </ul>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="xxl:col-span-12 xl:col-span-12 lg:col-span-12 md:col-span-12 col-span-12">
-                                                                <div className="rounded border dark:border-defaultborder/10">
-                                                                    <div className="p-4 flex items-start flex-wrap">
-                                                                        <div className="me-2">
-                                                                            <span className="avatar avatar-sm avatar-rounded">
-                                                                                <img src="../../assets/images/faces/9.jpg" alt="" />
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex-grow">
-                                                                            <p className="mb-1 font-semibold leading-none">You</p>
-                                                                            <p className="text-[.6875rem] mb-2 text-[#8c9097] dark:text-white/50">02, Dec - 06:32AM</p>
-                                                                            <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
-                                                                            <p className="text-[0.75rem] text-[#8c9097] dark:text-white/50 mb-4">There are many variations of passages 👏😍</p>
-                                                                            <div className="flex items-center justify-between md:mb-0 mb-2">
-                                                                                <div>
-                                                                                    <div className="btn-list">
-                                                                                        <button type="button" className="ti-btn ti-btn-primary !me-[.375rem] !py-1 !px-2 !text-[0.75rem] !font-medium btn-wave">
-                                                                                            Comment
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn !me-[.375rem] ti-btn-sm ti-btn-success">
-                                                                                            <i className="ri-thumb-up-line"></i>
-                                                                                        </button>
-                                                                                        <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-danger">
-                                                                                            <i className="ri-share-line"></i>
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-start">
-                                                                            <div>
-                                                                                <span className="badge bg-primary/10 text-primary me-2">Fashion</span>
-                                                                            </div>
-                                                                            <div className="hs-dropdown ti-dropdown">
-                                                                                <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-light" aria-expanded="false">
-                                                                                    <i className="ti ti-dots-vertical"></i>
-                                                                                </button>
-                                                                                <ul className="hs-dropdown-menu ti-dropdown-menu hidden">
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Delete</Link></li>
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Hide</Link></li>
-                                                                                    <li><Link className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block" href="#!" scroll={false}>Edit</Link></li>
-                                                                                </ul>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        </PerfectScrollbar>
-                                                    </li>
-                                                    <li className="list-group-item">
-                                                        <div className="text-center">
-                                                            <button type="button" className="ti-btn ti-btn-primary !font-medium">Show All</button>
-                                                        </div>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                            <div className="tab-pane fade !p-0 !border-0 hidden" id="followers-tab-pane"
-                                                role="tabpanel" aria-labelledby="followers-tab">
+                                            )}
+                                            {activeTab === 'friends' && (
+                                                <div className="tab-pane show active fade !p-0 !border-0" role="tabpanel">
                                                 <div className="grid grid-cols-12 sm:gap-x-6">
                                                     {Friendsdata.map((idx) =>(
                                                     <div className="xxl:col-span-4 xl:col-span-4 lg:col-span-6 md:col-span-6 col-span-12" key={Math.random()}>
@@ -686,30 +330,21 @@ const Profile = () => {
                                                         </div>
                                                     </div>
                                                     ))}
-                                                    <div className="col-span-12">
-                                                        <div className="text-center !mt-4">
-                                                            <button type="button" className="ti-btn ti-btn-primary !font-medium btn-wave">Show All</button>
-                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="tab-pane fade !p-0 !border-0 hidden" id="gallery-tab-pane"
-                                                role="tabpanel" aria-labelledby="gallery-tab">
+                                            )}
+                                            {activeTab === 'gallery' && (
+                                                <div className="tab-pane show active fade !p-0 !border-0" role="tabpanel">
                                                 <div className="grid grid-cols-12 sm:gap-x-6 gap-y-6">
                                                     <LightboxGallery/>
-                                                    <div className="col-span-12">
-                                                        <div className="text-center mt-6">
-                                                            <button type="button" className="ti-btn ti-btn-primary !font-medium">Show All</button>
-                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                       
                     </div>
                 </div>
             </div>

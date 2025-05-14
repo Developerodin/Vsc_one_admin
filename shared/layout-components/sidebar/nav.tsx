@@ -140,19 +140,6 @@ export const MenuItems: any = [
     dirchange: false
   },
 
-  {
-    icon: UserIcon,
-    title: "Profile",
-    type: "link",
-    path: "/profile/profile",
-    active: false,
-    selected: false,
-    dirchange: false
-  },
-
-
-  
-  
 
  
 ];
