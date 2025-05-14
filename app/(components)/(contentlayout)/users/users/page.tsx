@@ -65,16 +65,30 @@ const Users = () => {
       // Format the data according to table headers
       const formattedData = response.data.results.map(
         (user: any, index: number) => ({
-          srNo: index + 1,
-          name: user.name || "--",
-          email: user.email || "--",
-          kycStatus: user.kycStatus || "--",
-          status: user.status || "--",
+          profile: (
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <i className="ri-user-line text-xl text-primary"></i>
+              </div>
+            </div>
+          ),
+          name: (
+            <div className="flex items-center gap-2">
+              <span>{user.name || "--"}</span>
+              {user.kycStatus === "verified" && (
+                <i className="ri-checkbox-circle-fill text-success text-lg"></i>
+              )}
+            </div>
+          ),
+          contact: (
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">{user.mobileNumber || "--"}</span>
+              <span className="text-xs text-gray-500">{user.email || "--"}</span>
+            </div>
+          ),
           totalCommission: user.totalCommission || "--",
-          totalLeads: user.totalLeads || "--",
-          onboardingStatus: user.onboardingStatus || "--",
           address: user.address?.country || "--",
-          userId: user.id, // Store the user ID for fetching details
+          userId: user.id,
           actions: [
             {
               icon: "ri-eye-line",
@@ -192,16 +206,12 @@ const Users = () => {
   ];
 
   const headers = [
-    { key: "srNo", label: "Sr No." },
-    { key: "name", label: "Name" },
-    { key: "email", label: "Email" },
-    { key: "kycStatus", label: "KYC Status" },
-    { key: "status", label: "Status" },
-    { key: "totalCommission", label: "Total Commission" },
-    { key: "totalLeads", label: "Total Leads" },
-    { key: "onboardingStatus", label: "Onboarding Status" },
-    { key: "address", label: "Address" },
-    { key: "actions", label: "Actions" },
+    { key: "profile", label: "Profile", sortable: false },
+    { key: "name", label: "Name", sortable: true },
+    { key: "contact", label: "Contact", sortable: false },
+    { key: "totalCommission", label: "Total Commission", sortable: true },
+    { key: "address", label: "Address", sortable: false },
+    { key: "actions", label: "Actions", sortable: false },
   ];
 
   const openUserModal = (userId: string) => {

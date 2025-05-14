@@ -84,15 +84,6 @@ export const MenuItems: any = [
     menutitle: "GENERAL",
   },
 
-  {
-    icon: UserIcon,
-    title: "Users",
-    type: "link",
-    path: "/users/users",
-    active: false,
-    selected: false,
-    dirchange: false
-  },
 
   {
     icon: CategoryIcon,
@@ -109,6 +100,21 @@ export const MenuItems: any = [
     title: "Products",
     type: "link",
     path: "/products/products",
+    active: false,
+    selected: false,
+    dirchange: false
+  },
+
+
+  {
+    menutitle: "APP DATA",
+  },
+
+  {
+    icon: UserIcon,
+    title: "Users",
+    type: "link",
+    path: "/users/users",
     active: false,
     selected: false,
     dirchange: false
@@ -133,6 +139,9 @@ export const MenuItems: any = [
     selected: false,
     dirchange: false
   },
+
+  
+  
 
  
 ];

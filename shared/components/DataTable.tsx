@@ -18,6 +18,7 @@ interface TableHeader {
     key: string;
     label: string;
     className?: string;
+    sortable?: boolean;
 }
 
 interface TableAction {
@@ -72,7 +73,7 @@ const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '' }) 
                 meta: {
                     className: header.className || '',
                 },
-                enableSorting: header.key !== 'actions', // Disable sorting for actions column
+                enableSorting: header.sortable !== false, // Enable sorting only if sortable is not explicitly false
             })
         ), [headers]
     );
@@ -121,7 +122,7 @@ const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '' }) 
                                     <th
                                         key={header.id}
                                         className={`text-start ${(header.column.columnDef as CustomColumnDef<TableRow, any>).meta?.className || ''}`}
-                                        onClick={header.column.getToggleSortingHandler()}
+                                        onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                                         style={{ cursor: header.column.getCanSort() ? 'pointer' : 'default' }}
                                     >
                                         <div className="flex items-center gap-1">
