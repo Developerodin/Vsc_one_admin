@@ -63,9 +63,22 @@ const Category = () => {
                     }
                 });
                 
+                const subcategoryNames = subcategoryResponse.data.map((sub: any) => sub.name).join(', ');
+                
                 return {
-                    category: category.name || '--',
-                    subcategoryCount: <Link href={`/subcategory/subcategory?categoryId=${category.id}`} className="text-primary hover:text-primary-dark">{subcategoryResponse.data.length || 0}</Link>,
+                    category: (
+                        <div className="flex items-center">
+                            <Link 
+                                href={`/subcategory/subcategory?categoryId=${category.id}`} 
+                                className="text-black hover:text-primary-dark"
+                            >
+                                {category.name || '--'}
+                                {subcategoryResponse.data.length > 0 && (
+                                    <span className="text-gray-600"> › {subcategoryNames}</span>
+                                )}
+                            </Link>
+                        </div>
+                    ),
                     createdDate: new Date(category.createdAt).toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'short',
@@ -171,8 +184,7 @@ const Category = () => {
     ];
 
     const headers = [
-        { key: 'category', label: 'Category' ,sortable: false},
-        { key: 'subcategoryCount', label: 'Subcategories' ,sortable: false},
+        { key: 'category', label: 'Category Name' ,sortable: true},
         { key: 'createdDate', label: 'Created Date' ,sortable: false},
         { key: 'status', label: 'Status' ,sortable: false},
         { key: 'actions', label: 'Actions' ,sortable: false}
