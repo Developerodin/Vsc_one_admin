@@ -7,6 +7,7 @@ import Link from 'next/link'
 import DatePicker from 'react-datepicker'
 import Select from 'react-select'
 import "react-datepicker/dist/react-datepicker.css"
+import ProtectedRoute from "@/shared/components/ProtectedRoute";
 
 const Leads = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
@@ -261,4 +262,10 @@ const Leads = () => {
     )
 }
 
-export default Leads 
+export default function ProtectedLeads() {
+    return (
+        <ProtectedRoute>
+            <Leads />
+        </ProtectedRoute>
+    )
+}

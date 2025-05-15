@@ -7,6 +7,7 @@ import Link from 'next/link'
 import DatePicker from 'react-datepicker'
 import Select from 'react-select'
 import "react-datepicker/dist/react-datepicker.css"
+import ProtectedRoute from '@/shared/components/ProtectedRoute'
 
 const Transactions = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
@@ -407,4 +408,10 @@ const Transactions = () => {
     )
 }
 
-export default Transactions 
+export default function ProtectedTransactions() {
+    return (
+        <ProtectedRoute>
+            <Transactions />
+        </ProtectedRoute>
+    )
+}

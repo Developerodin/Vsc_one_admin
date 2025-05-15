@@ -11,12 +11,28 @@ import axios from 'axios'
 import { Base_url } from '@/app/api/config/BaseUrl'
 import { useRouter } from 'next/navigation'
 import ConfirmModal from "@/app/shared/components/ConfirmModal";
+import * as XLSX from 'xlsx'
+import ProtectedRoute from "@/shared/components/ProtectedRoute";
+interface ProductData {
+    name: string;
+    type: string;
+    category: string;
+    commission: string;
+    duration: string;
+    status: string;
+    actions: Array<{
+        icon: string;
+        className: string;
+        href?: string;
+        onClick?: () => void;
+    }>;
+}
 
 const Products = () => {
     const router = useRouter();
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [loading, setLoading] = useState(false);
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState<ProductData[]>([]);
     const [categories, setCategories] = useState<Array<{value: string, label: string}>>([]);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -253,6 +269,28 @@ const Products = () => {
         }
     };
 
+    const handleExport = () => {
+        // Create a new array without the actions column
+        const exportData = products.map(product => ({
+            'Name': product.name,
+            'Type': product.type,
+            'Category': product.category,
+            'Commission': product.commission,
+            'Duration': product.duration,
+            'Status': product.status
+        }));
+
+        // Create a worksheet
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Create a workbook
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Products');
+
+        // Generate Excel file
+        XLSX.writeFile(wb, 'products.xlsx');
+    };
+
     const StatusOptions = [
         { value: 'active', label: 'Active' },
         { value: 'inactive', label: 'Inactive' },
@@ -283,10 +321,17 @@ const Products = () => {
                     <div className="box">
                         <div className="box-header">
                             <h5 className="box-title">Products List</h5>
-                            <div className="flex">
+                            <div className="flex space-x-2">
                                 <button 
                                     type="button" 
-                                    className="hs-dropdown-toggle ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
+                                    className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                                    onClick={handleExport}
+                                >
+                                    <i className="ri-file-excel-line font-semibold align-middle mr-1"></i> Export
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
                                     onClick={() => router.push('/products/create')}
                                 >
                                     <i className="ri-add-line font-semibold align-middle"></i> Create Product
@@ -582,4 +627,10 @@ const Products = () => {
     )
 }
 
-export default Products 
+export default function ProtectedProducts() {
+    return (
+        <ProtectedRoute>
+            <Products />
+        </ProtectedRoute>
+    )
+}

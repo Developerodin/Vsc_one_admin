@@ -9,6 +9,7 @@ import axios from "axios";
 import { Base_url } from "@/app/api/config/BaseUrl";
 import Select from "react-select";
 import ConfirmModal from "@/app/shared/components/ConfirmModal";
+import * as XLSX from 'xlsx';
 
 interface User {
   id: string;
@@ -116,9 +117,6 @@ const Users = () => {
     router.push(`/users/edit?id=${userId}`);
   };
 
-
-
-
   const createUser = async () => {
     router.push("/users/create");
   }
@@ -149,6 +147,27 @@ const Users = () => {
     setShowDeleteModal(true);
   };
 
+  const handleExport = () => {
+    // Create a new array without the actions column
+    const exportData = users.map(user => ({
+      'Name': user.name.props.children[0].props.children,
+      'Mobile Number': user.contact.props.children[0].props.children,
+      'Email': user.contact.props.children[1].props.children,
+      'Total Commission': user.totalCommission,
+      'Address': user.address
+    }));
+
+    // Create a worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Create a workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Users');
+
+    // Generate Excel file
+    XLSX.writeFile(wb, 'users.xlsx');
+  };
+
   const headers = [
     { key: "profile", label: "Profile", sortable: false },
     { key: "name", label: "Name", sortable: true },
@@ -167,14 +186,20 @@ const Users = () => {
           <div className="box">
             <div className="box-header">
               <h5 className="box-title">Users List</h5>
-              <div className="box-tools">
+              <div className="flex space-x-2">
+                <button 
+                  type="button" 
+                  className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                  onClick={handleExport}
+                >
+                  <i className="ri-file-excel-line font-semibold align-middle mr-1"></i> Export
+                </button>
                 <button
                   type="button"
-                  className="hs-dropdown-toggle ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
+                  className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
                   onClick={() => createUser()}
                 >
-                   <i className="ri-add-line font-semibold align-middle"></i>{" "}
-                  Create User
+                  <i className="ri-add-line font-semibold align-middle"></i> Create User
                 </button>
               </div>
             </div>

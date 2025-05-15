@@ -10,6 +10,7 @@ import "react-datepicker/dist/react-datepicker.css"
 import axios from 'axios'
 import { Base_url } from '@/app/api/config/BaseUrl'
 import { useSearchParams } from 'next/navigation'
+import ProtectedRoute from '@/shared/components/ProtectedRoute'
 
 const Subcategory = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
@@ -252,4 +253,10 @@ const Subcategory = () => {
     )
 }
 
-export default Subcategory 
+export default function ProtectedSubcategory() {
+    return (
+        <ProtectedRoute>
+            <Subcategory />
+        </ProtectedRoute>
+    )
+}

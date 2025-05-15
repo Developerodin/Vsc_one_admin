@@ -6,6 +6,7 @@ import Link from 'next/link'
 import React, { Fragment } from 'react'
 import * as Analyticsdata from "@/shared/data/dashboards/analyticsdata";
 import dynamic from "next/dynamic";
+import ProtectedRoute from "@/shared/components/ProtectedRoute";
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const Analytics = () => {
@@ -657,4 +658,10 @@ const Analytics = () => {
     )
 }
 
-export default Analytics
+export default function ProtectedAnalytics() {
+    return (
+        <ProtectedRoute>
+            <Analytics />
+        </ProtectedRoute>
+    )
+}

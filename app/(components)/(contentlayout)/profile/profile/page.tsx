@@ -9,7 +9,7 @@ import 'react-perfect-scrollbar/dist/css/styles.css';
 import axios from 'axios';
 import { Base_url } from '@/app/api/config/BaseUrl';
 import { useSearchParams } from 'next/navigation';
-
+import ProtectedRoute from '@/shared/components/ProtectedRoute';
 const Profile = () => {
     const searchParams = useSearchParams();
     const userId = searchParams.get('id');
@@ -352,4 +352,10 @@ const Profile = () => {
     )
 }
 
-export default Profile
+export default function ProtectedProfile() {
+    return (
+        <ProtectedRoute>
+            <Profile />
+        </ProtectedRoute>
+    )
+}

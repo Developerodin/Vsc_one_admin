@@ -37,6 +37,7 @@
     "sass": "^1.75.0",
     "simplebar-react": "^3.2.5",
     "tailwind-clip-path": "^1.0.0",
+    "xlsx": "^0.18.5",
     "yet-another-react-lightbox": "^3.23.1"
   },
   "devDependencies": {
