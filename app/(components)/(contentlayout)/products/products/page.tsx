@@ -10,6 +10,7 @@ import "react-datepicker/dist/react-datepicker.css"
 import axios from 'axios'
 import { Base_url } from '@/app/api/config/BaseUrl'
 import { useRouter } from 'next/navigation'
+import ConfirmModal from "@/app/shared/components/ConfirmModal";
 
 const Products = () => {
     const router = useRouter();
@@ -17,6 +18,9 @@ const Products = () => {
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState<Array<{value: string, label: string}>>([]);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         type: '',
@@ -78,8 +82,6 @@ const Products = () => {
                     return category?.label || '--';
                 }) || ['--'];
 
-              
-
                 return {
                     name: product.name || '--',
                     type: product.type || '--',
@@ -96,12 +98,12 @@ const Products = () => {
                         {
                             icon: 'ri-edit-line',
                             className: 'ti-btn-info',
-                            href: '#'
+                            href: `/products/edit?id=${product.id}`
                         },
                         {
                             icon: 'ri-delete-bin-line',
                             className: 'ti-btn-danger',
-                            href: '#'
+                            onClick: () => handleDelete(product.id)
                         }
                     ]
                 };
@@ -221,6 +223,33 @@ const Products = () => {
             console.error('Error creating product:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (productId: string) => {
+        setSelectedProductId(productId);
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!selectedProductId) return;
+        
+        try {
+            setDeleteLoading(true);
+            const token = localStorage.getItem('token');
+            await axios.delete(`${Base_url}products/${selectedProductId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            // Refresh the products list
+            fetchProducts();
+            setDeleteModalOpen(false);
+        } catch (error) {
+            console.error('Error deleting product:', error);
+        } finally {
+            setDeleteLoading(false);
+            setSelectedProductId(null);
         }
     };
 
@@ -541,6 +570,14 @@ const Products = () => {
                     </div>
                 </div>
             </div>
+            <ConfirmModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Product"
+                message="Are you sure you want to delete this product? This action cannot be undone."
+                loading={deleteLoading}
+            />
         </Fragment>
     )
 }

@@ -8,6 +8,7 @@ import Select from 'react-select'
 import axios from 'axios'
 import { Base_url } from '@/app/api/config/BaseUrl'
 import { useRouter } from 'next/navigation'
+import ConfirmModal from "@/app/shared/components/ConfirmModal";
 
 interface CategoryData {
     category: string | JSX.Element;
@@ -26,6 +27,9 @@ const Category = () => {
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState<CategoryData[]>([]);
     const [activeTab, setActiveTab] = useState(0);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -88,12 +92,12 @@ const Category = () => {
                             {
                                 icon: 'ri-edit-line',
                                 className: 'ti-btn-info',
-                                href: '#'
+                                href: `/category/edit?id=${category.id}`
                             },
                             {
                                 icon: 'ri-delete-bin-line',
                                 className: 'ti-btn-danger',
-                                href: '#'
+                                onClick: () => handleDelete(category.id)
                             }
                         ]
                     }));
@@ -122,12 +126,12 @@ const Category = () => {
                             {
                                 icon: 'ri-edit-line',
                                 className: 'ti-btn-info',
-                                href: '#'
+                                href: `/category/edit?id=${category.id}`
                             },
                             {
                                 icon: 'ri-delete-bin-line',
                                 className: 'ti-btn-danger',
-                                href: '#'
+                                onClick: () => handleDelete(category.id)
                             }
                         ]
                     }];
@@ -199,6 +203,32 @@ const Category = () => {
             console.error('Error creating category:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = (categoryId: string) => {
+        setSelectedCategoryId(categoryId);
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!selectedCategoryId) return;
+        
+        try {
+            setDeleteLoading(true);
+            const token = localStorage.getItem('token');
+            await axios.delete(`${Base_url}categories/${selectedCategoryId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            await fetchCategories();
+            setDeleteModalOpen(false);
+            setSelectedCategoryId(null);
+        } catch (error) {
+            console.error('Error deleting category:', error);
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -378,6 +408,17 @@ const Category = () => {
                     </div>
                 </div>
             </div>
+            <ConfirmModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setSelectedCategoryId(null);
+                }}
+                onConfirm={confirmDelete}
+                title="Delete Category"
+                message="Are you sure you want to delete this category? This action cannot be undone."
+                loading={deleteLoading}
+            />
         </Fragment>
     )
 }
