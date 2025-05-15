@@ -113,7 +113,7 @@ const Users = () => {
   };
 
   const openUpdateModal = (userId: string) => {
-    router.push(`/users/edit/${userId}`);
+    router.push(`/users/edit?id=${userId}`);
   };
 
 

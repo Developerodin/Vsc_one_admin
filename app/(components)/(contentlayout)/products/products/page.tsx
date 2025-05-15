@@ -16,7 +16,7 @@ const Products = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState([]);
-    const [categories, setCategories] = useState([]);
+    const [categories, setCategories] = useState<Array<{value: string, label: string}>>([]);
     const [formData, setFormData] = useState({
         name: '',
         type: '',
@@ -45,30 +45,25 @@ const Products = () => {
 
     useEffect(() => {
         fetchProducts();
-        fetchCategories();
     }, []);
-
-    const fetchCategories = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}categories`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            const categoryOptions = response.data.results.map((category: any) => ({
-                value: category.id,
-                label: category.name
-            }));
-            setCategories(categoryOptions);
-        } catch (error) {
-            console.error('Error fetching categories:', error);
-        }
-    };
 
     const fetchProducts = async () => {
         try {
             const token = localStorage.getItem('token');
+            
+            // First get categories
+            const categoriesResponse = await axios.get(`${Base_url}categories`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const categoryOptions = categoriesResponse.data.results.map((category: any) => ({
+                value: category.id,
+                label: category.name
+            }));
+            setCategories(categoryOptions);
+
+            // Then get products
             const response = await axios.get(`${Base_url}products`, {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -76,32 +71,41 @@ const Products = () => {
             });
 
             // Format the data according to table headers
-            const formattedData = response.data.results.map((product: any, index: number) => ({
-                name: product.name || '--',
-                type: product.type || '--',
-                category: product.categories?.[0] || '--',
-                commission: `${product.commission?.percentage || 0}%`,
-                duration: product.duration || '--',
-                status: product.status || '--',
-                actions: [
-                    {
-                        icon: 'ri-eye-line',
-                        className: 'ti-btn-primary',
-                        href: '#'
-                        
-                    },
-                    {
-                        icon: 'ri-edit-line',
-                        className: 'ti-btn-info',
-                        href: '#'
-                    },
-                    {
-                        icon: 'ri-delete-bin-line',
-                        className: 'ti-btn-danger',
-                        href: '#'
-                    }
-                ]
-            }));
+            const formattedData = response.data.results.map((product: any, index: number) => {
+                // Get category names for all category IDs
+                const categoryNames = product.categories?.map((catId: string) => {
+                    const category = categoryOptions.find(cat => cat.value === catId);
+                    return category?.label || '--';
+                }) || ['--'];
+
+              
+
+                return {
+                    name: product.name || '--',
+                    type: product.type || '--',
+                    category: categoryNames.join(', '),
+                    commission: `${product.commission?.percentage || 0}%`,
+                    duration: product.duration || '--',
+                    status: product.status || '--',
+                    actions: [
+                        {
+                            icon: 'ri-eye-line',
+                            className: 'ti-btn-primary',
+                            href: '#'
+                        },
+                        {
+                            icon: 'ri-edit-line',
+                            className: 'ti-btn-info',
+                            href: '#'
+                        },
+                        {
+                            icon: 'ri-delete-bin-line',
+                            className: 'ti-btn-danger',
+                            href: '#'
+                        }
+                    ]
+                };
+            });
 
             setProducts(formattedData);
         } catch (error) {

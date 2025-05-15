@@ -56,56 +56,85 @@ const Category = () => {
                 }
             });
 
-            const formattedData = await Promise.all(response.data.results.map(async (category: any) => {
+            const formattedData = await Promise.all(response.data.results.flatMap(async (category: any) => {
                 const subcategoryResponse = await axios.get(`${Base_url}subcategories/category/${category.id}`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
                 });
                 
-                const subcategoryNames = subcategoryResponse.data.map((sub: any) => sub.name).join(', ');
-                
-                return {
-                    category: (
-                        <div className="flex items-center">
+                if (subcategoryResponse.data.length > 0) {
+                    return subcategoryResponse.data.map((sub: any) => ({
+                        category: (
+                            <Link 
+                                href={`/subcategory/subcategory?categoryId=${category.id}`} 
+                                className="text-black hover:text-primary-dark"
+                            >
+                                {category.name || '--'} › {sub.name}
+                            </Link>
+                        ),
+                        createdDate: new Date(category.createdAt).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                        }),
+                        status: category.status || '--',
+                        actions: [
+                            {
+                                icon: 'ri-eye-line',
+                                className: 'ti-btn-primary',
+                                href: '#'
+                            },
+                            {
+                                icon: 'ri-edit-line',
+                                className: 'ti-btn-info',
+                                href: '#'
+                            },
+                            {
+                                icon: 'ri-delete-bin-line',
+                                className: 'ti-btn-danger',
+                                href: '#'
+                            }
+                        ]
+                    }));
+                } else {
+                    return [{
+                        category: (
                             <Link 
                                 href={`/subcategory/subcategory?categoryId=${category.id}`} 
                                 className="text-black hover:text-primary-dark"
                             >
                                 {category.name || '--'}
-                                {subcategoryResponse.data.length > 0 && (
-                                    <span className="text-gray-600"> › {subcategoryNames}</span>
-                                )}
                             </Link>
-                        </div>
-                    ),
-                    createdDate: new Date(category.createdAt).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                    }),
-                    status: category.status || '--',
-                    actions: [
-                        {
-                            icon: 'ri-eye-line',
-                            className: 'ti-btn-primary',
-                            href: '#'
-                        },
-                        {
-                            icon: 'ri-edit-line',
-                            className: 'ti-btn-info',
-                            href: '#'
-                        },
-                        {
-                            icon: 'ri-delete-bin-line',
-                            className: 'ti-btn-danger',
-                            href: '#'
-                        }
-                    ]
-                };
+                        ),
+                        createdDate: new Date(category.createdAt).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                        }),
+                        status: category.status || '--',
+                        actions: [
+                            {
+                                icon: 'ri-eye-line',
+                                className: 'ti-btn-primary',
+                                href: '#'
+                            },
+                            {
+                                icon: 'ri-edit-line',
+                                className: 'ti-btn-info',
+                                href: '#'
+                            },
+                            {
+                                icon: 'ri-delete-bin-line',
+                                className: 'ti-btn-danger',
+                                href: '#'
+                            }
+                        ]
+                    }];
+                }
             }));
 
-            setCategories(formattedData);
+            setCategories(formattedData.flat());
         } catch (error) {
             console.error('Error fetching categories:', error);
         }
