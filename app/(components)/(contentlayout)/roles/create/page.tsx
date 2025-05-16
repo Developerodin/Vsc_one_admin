@@ -86,9 +86,9 @@ const CreateRole = () => {
             <div className="box-body">
               <div className="flex border-b border-gray-200 mb-4">
                 <button
-                  className={`px-4 py-2 text-sm font-medium ${
+                  className={`px-4 py-2 text-sm font-medium rounded-t-lg focus:outline-none ${
                     activeTab === 'general'
-                      ? 'text-primary border-b-2 border-primary'
+                      ? 'bg-primary text-white'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                   onClick={() => setActiveTab('general')}
@@ -96,9 +96,9 @@ const CreateRole = () => {
                   General Information
                 </button>
                 <button
-                  className={`px-4 py-2 text-sm font-medium ${
+                  className={`px-4 py-2 text-sm font-medium rounded-t-lg focus:outline-none ${
                     activeTab === 'access'
-                      ? 'text-primary border-b-2 border-primary'
+                      ? 'bg-primary text-white'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                   onClick={() => setActiveTab('access')}
