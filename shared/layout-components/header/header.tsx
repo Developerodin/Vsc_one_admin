@@ -358,6 +358,13 @@ const Header = ({ local_varaiable, ThemeChanger }:any) => {
     };
   }, []);
 
+  const handleLogout = () => {
+    // Clear all items from localStorage
+    localStorage.clear();
+    // Redirect to login page
+    window.location.href = '/';
+  };
+
   return (
     <Fragment>
       <div className="app-header">
@@ -368,12 +375,12 @@ const Header = ({ local_varaiable, ThemeChanger }:any) => {
               <div className="header-element">
                 <div className="horizontal-logo">
                   <Link href="/dashboards/crm/" className="header-logo">
-                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-logo.png`} alt="logo" className="desktop-logo" />
-                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/toggle-logo.png`} alt="logo" className="toggle-logo" />
-                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-dark.png`} alt="logo" className="desktop-dark" />
-                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/toggle-dark.png`} alt="logo" className="toggle-dark" />
-                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-white.png`} alt="logo" className="desktop-white" />
-                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/toggle-white.png`} alt="logo" className="toggle-white" />
+                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-logo.png`} alt="logo" className="desktop-logo" style={{ width: '70%', height: 'auto' }} />
+                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/toggle-logo.png`} alt="logo" className="toggle-logo" style={{ width: '70%', height: 'auto' }} />
+                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-dark.png`} alt="logo" className="desktop-dark" style={{ width: '70%', height: 'auto' }} />
+                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/toggle-dark.png`} alt="logo" className="toggle-dark" style={{ width: '70%', height: 'auto' }} />
+                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-white.png`} alt="logo" className="desktop-white" style={{ width: '70%', height: 'auto' }} />
+                    <img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/toggle-white.png`} alt="logo" className="toggle-white" style={{ width: '70%', height: 'auto' }} />
                   </Link>
                 </div>
               </div>
@@ -769,8 +776,18 @@ const Header = ({ local_varaiable, ThemeChanger }:any) => {
                       className="ti ti-wallet text-[1.125rem] me-2 opacity-[0.7 !inline-flex"></i>Bal: $7,12,950</Link></li>
                     <li><Link className="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex" href="#!"><i
                       className="ti ti-headset text-[1.125rem] me-2 opacity-[0.7] !inline-flex"></i>Support</Link></li> */}
-                    <li><Link className="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex" href="/"><i
-                      className="ti ti-logout text-[1.125rem] me-2 opacity-[0.7] !inline-flex"></i>Log Out</Link></li>
+                    <li>
+                      <Link 
+                          className="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex" 
+                          href="#" 
+                          onClick={(e) => {
+                              e.preventDefault();
+                              handleLogout();
+                          }}
+                      >
+                          <i className="ti ti-logout text-[1.125rem] me-2 opacity-[0.7] !inline-flex"></i>Log Out
+                      </Link>
+                    </li>
                   </ul>
                 </div>
               </div>
