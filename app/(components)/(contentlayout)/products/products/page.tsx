@@ -99,6 +99,7 @@ const Products = () => {
                 }) || ['--'];
 
                 return {
+                    srNo: index + 1,
                     name: product.name || '--',
                     type: product.type || '--',
                     category: categoryNames.join(', '),

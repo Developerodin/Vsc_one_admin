@@ -159,14 +159,15 @@ const Profile = () => {
                                                 className={`w-full sm:w-auto flex ${activeTab === 'friends' ? 'active hs-tab-active:font-semibold hs-tab-active:text-white hs-tab-active:bg-primary' : ''} rounded-md py-2 px-4 text-primary text-sm`}
                                                 onClick={() => setActiveTab('friends')}
                                             >
-                                                <i className="ri-money-dollar-box-line me-1 align-middle inline-block"></i>Friends
+                                                <i className="ri-information-line me-1 align-middle inline-block"></i>Other Information
                                             </button>
                                             <button 
                                                 className={`w-full sm:w-auto flex ${activeTab === 'gallery' ? 'active hs-tab-active:font-semibold hs-tab-active:text-white hs-tab-active:bg-primary' : ''} rounded-md py-2 px-4 text-primary text-sm`}
-                                                onClick={() => setActiveTab('gallery')}
+                                                onClick={() => setActiveTab('kyc')}
                                             >
-                                                <i className="ri-exchange-box-line me-1 align-middle inline-block"></i>Gallery
+                                                <i className="ri-file-text-line me-1 align-middle inline-block"></i>Kyc
                                             </button>
+
                                         </nav>
                                         <div>
                                             <p className="font-semibold mb-2">Profile 60% completed - <Link href="#!" scroll={false} className="text-primary text-[0.75rem]">Finish now</Link></p>
@@ -333,10 +334,16 @@ const Profile = () => {
                                                     </div>
                                                 </div>
                                             )}
-                                            {activeTab === 'gallery' && (
+                                            {activeTab === 'kyc' && (
                                                 <div className="tab-pane show active fade !p-0 !border-0" role="tabpanel">
-                                                <div className="grid grid-cols-12 sm:gap-x-6 gap-y-6">
-                                                    <LightboxGallery/>
+                                                    <div className="grid grid-cols-12 sm:gap-x-6 gap-y-6">
+                                                        <div className="xxl:col-span-4 xl:col-span-4 lg:col-span-6 md:col-span-6 col-span-12">
+                                                            <div className="box !shadow-none border dark:border-defaultborder/10">
+                                                                <div className="box-body p-6">
+                                                                    <h1>Kyc</h1>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}

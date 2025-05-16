@@ -44,6 +44,8 @@ const LeadIcon = <i className="bx bx-user-plus side-menu__icon"></i>;
 
 const UserIcon = <i className="bx bx-user side-menu__icon"></i>;
 
+const ShieldIcon = <i className="bx bx-shield side-menu__icon"></i>;
+
 const badge = (
   <span className="badge !bg-warning/10 !text-warning !py-[0.25rem] !px-[0.45rem] !text-[0.75em] ms-1">
     12
@@ -100,6 +102,17 @@ export const MenuItems: any = [
     title: "Products",
     type: "link",
     path: "/products/products",
+    active: false,
+    selected: false,
+    dirchange: false
+  },
+
+
+  {
+    icon: ShieldIcon,
+    title: "Roles",
+    type: "link",
+    path: "/roles/roles",
     active: false,
     selected: false,
     dirchange: false
