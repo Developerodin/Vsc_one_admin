@@ -7,69 +7,8 @@ import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import DataTable from "@/shared/components/DataTable";
 import ConfirmModal from "@/app/shared/components/ConfirmModal";
 import * as XLSX from 'xlsx';
-
-// Mock data for roles
-const mockRoles = [
-  {
-    id: "1",
-    name: "Admin",
-    description: "Full access to all modules and functionalities",
-    navigationAccess: ["dashboard", "leads", "users", "roles", "transactions", "reports", "settings"],
-    departmentAccess: ["health", "vehicle", "life", "property", "travel"],
-    status: "active",
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  },
-  {
-    id: "2",
-    name: "Sales Executive - Health",
-    description: "Access to health insurance leads and transactions",
-    navigationAccess: ["dashboard", "leads", "transactions"],
-    departmentAccess: ["health"],
-    status: "active",
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  },
-  {
-    id: "3",
-    name: "Sales Executive - Vehicle",
-    description: "Access to vehicle insurance leads and transactions",
-    navigationAccess: ["dashboard", "leads", "transactions"],
-    departmentAccess: ["vehicle"],
-    status: "active",
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  },
-  {
-    id: "4",
-    name: "Support Staff",
-    description: "Access to user management and support features",
-    navigationAccess: ["dashboard", "users", "leads"],
-    departmentAccess: ["health", "vehicle", "life", "property", "travel"],
-    status: "active",
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  }
-];
-
-// Navigation and department labels mapping
-const navigationLabels: { [key: string]: string } = {
-  dashboard: "Dashboard",
-  leads: "Leads",
-  users: "Users",
-  roles: "Roles",
-  transactions: "Transactions",
-  reports: "Reports",
-  settings: "Settings"
-};
-
-const departmentLabels: { [key: string]: string } = {
-  health: "Health Insurance",
-  vehicle: "Vehicle Insurance",
-  life: "Life Insurance",
-  property: "Property Insurance",
-  travel: "Travel Insurance"
-};
+import { Base_url } from '@/app/api/config/BaseUrl';
+import axios from 'axios';
 
 const Roles = () => {
   const router = useRouter();
@@ -79,50 +18,52 @@ const Roles = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalResults: 0
+  });
 
   useEffect(() => {
-    // Simulate API call with setTimeout
-    setTimeout(() => {
-      fetchRoles();
-    }, 500);
-  }, []);
+    fetchRoles();
+  }, [pagination.page]);
 
-  const fetchRoles = () => {
+  const fetchRoles = async () => {
     try {
       setLoading(true);
-      // Format the mock data according to table headers
-      const formattedData = mockRoles.map((role) => ({
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}roles`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const { results, page, limit, totalPages, totalResults } = response.data;
+      
+      // Update pagination state
+      setPagination({
+        page,
+        limit,
+        totalPages,
+        totalResults
+      });
+
+      // Format the data according to table headers
+      const formattedData = results.map((role: any) => ({
         name: (
           <div className="flex items-center gap-2">
             <span>{role.name || "--"}</span>
           </div>
         ),
         description: role.description || "--",
-        navigationAccess: (
-          <div className="flex flex-wrap gap-1">
-            {role.navigationAccess?.map((access: string) => (
-              <span key={access} className="px-2 py-1 text-xs bg-primary/10 text-primary rounded-full">
-                {navigationLabels[access] || access}
-              </span>
-            ))}
-          </div>
-        ),
-        departmentAccess: (
-          <div className="flex flex-wrap gap-1">
-            {role.departmentAccess?.map((dept: string) => (
-              <span key={dept} className="px-2 py-1 text-xs bg-success/10 text-success rounded-full">
-                {departmentLabels[dept] || dept}
-              </span>
-            ))}
-          </div>
-        ),
         status: (
           <span className={`px-2 py-1 text-xs rounded-full ${
-            role.status === 'active' 
+            role.isActive 
               ? 'bg-success/10 text-success' 
               : 'bg-danger/10 text-danger'
           }`}>
-            {role.status || '--'}
+            {role.isActive ? 'Active' : 'Inactive'}
           </span>
         ),
         actions: [
@@ -170,13 +111,12 @@ const Roles = () => {
     
     setDeleteLoading(true);
     try {
-      // Simulate API call with setTimeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Remove the role from mock data
-      const updatedRoles = mockRoles.filter(role => role.id !== roleToDelete);
-      mockRoles.length = 0;
-      mockRoles.push(...updatedRoles);
+      const token = localStorage.getItem("token");
+      await axios.delete(`${Base_url}roles/${roleToDelete}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       
       fetchRoles(); // Refresh the roles list
       setShowDeleteModal(false);
@@ -194,12 +134,10 @@ const Roles = () => {
 
   const handleExport = () => {
     // Create a new array without the actions column
-    const exportData = mockRoles.map(role => ({
-      'Name': role.name,
+    const exportData = roles.map(role => ({
+      'Name': role.name.props.children[0].props.children,
       'Description': role.description,
-      'Navigation Access': role.navigationAccess.map(access => navigationLabels[access] || access).join(', '),
-      'Department Access': role.departmentAccess.map(dept => departmentLabels[dept] || dept).join(', '),
-      'Status': role.status
+      'Status': role.status.props.children
     }));
 
     // Create a worksheet
@@ -216,8 +154,6 @@ const Roles = () => {
   const headers = [
     { key: "name", label: "Role Name", sortable: true },
     { key: "description", label: "Description", sortable: false },
-    { key: "navigationAccess", label: "Navigation Access", sortable: false },
-    { key: "departmentAccess", label: "Department Access", sortable: false },
     { key: "status", label: "Status", sortable: false },
     { key: "actions", label: "Actions", sortable: false },
   ];
@@ -254,7 +190,10 @@ const Roles = () => {
               ) : error ? (
                 <div className="text-center text-danger">{error}</div>
               ) : (
-                <DataTable headers={headers} data={roles} />
+                <DataTable 
+                  headers={headers} 
+                  data={roles}
+                />
               )}
             </div>
           </div>

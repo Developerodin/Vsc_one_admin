@@ -4,58 +4,24 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Pageheader from "@/shared/layout-components/page-header/pageheader";
 import Seo from "@/shared/layout-components/seo/seo";
 import ProtectedRoute from "@/shared/components/ProtectedRoute";
+import axios from 'axios';
+import { Base_url } from '@/app/api/config/BaseUrl';
 
 interface FormData {
   name: string;
   description: string;
   navigationAccess: string[];
-  departmentAccess: string[];
+  permissions: string[];
   status: string;
 }
 
-// Mock data for roles
-const mockRoles = [
-  {
-    id: "1",
-    name: "Admin",
-    description: "Full access to all modules and functionalities",
-    navigationAccess: ["dashboard", "leads", "users", "roles", "transactions", "reports", "settings"],
-    departmentAccess: ["health", "vehicle", "life", "property", "travel"],
-    status: "active",
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  },
-  {
-    id: "2",
-    name: "Sales Executive - Health",
-    description: "Access to health insurance leads and transactions",
-    navigationAccess: ["dashboard", "leads", "transactions"],
-    departmentAccess: ["health"],
-    status: "active",
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  },
-  {
-    id: "3",
-    name: "Sales Executive - Vehicle",
-    description: "Access to vehicle insurance leads and transactions",
-    navigationAccess: ["dashboard", "leads", "transactions"],
-    departmentAccess: ["vehicle"],
-    status: "active",
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  },
-  {
-    id: "4",
-    name: "Support Staff",
-    description: "Access to user management and support features",
-    navigationAccess: ["dashboard", "users", "leads"],
-    departmentAccess: ["health", "vehicle", "life", "property", "travel"],
-    status: "active",
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  }
-];
+interface Permission {
+  id: string;
+  name: string;
+  description: string;
+  module: string;
+  isActive: boolean;
+}
 
 // Navigation menu options
 const navigationOptions = [
@@ -68,15 +34,6 @@ const navigationOptions = [
   { value: 'settings', label: 'Settings' }
 ];
 
-// Department options
-const departmentOptions = [
-  { value: 'health', label: 'Health Insurance' },
-  { value: 'vehicle', label: 'Vehicle Insurance' },
-  { value: 'life', label: 'Life Insurance' },
-  { value: 'property', label: 'Property Insurance' },
-  { value: 'travel', label: 'Travel Insurance' }
-];
-
 const EditRole = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -86,11 +43,13 @@ const EditRole = () => {
     name: '',
     description: '',
     navigationAccess: [],
-    departmentAccess: [],
+    permissions: [],
     status: 'active'
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   useEffect(() => {
     if (!roleId) {
@@ -98,30 +57,46 @@ const EditRole = () => {
       return;
     }
     fetchRoleData();
+    fetchPermissions();
   }, [roleId]);
+
+  const fetchPermissions = async () => {
+    try {
+      setLoadingPermissions(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}permissions`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setPermissions(response.data.results);
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
 
   const fetchRoleData = async () => {
     try {
-      // Simulate API call with setTimeout
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}roles/${roleId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       
-      // Find the role in mock data
-      const roleData = mockRoles.find(role => role.id === roleId);
-      
-      if (roleData) {
-        setFormData({
-          name: roleData.name || '',
-          description: roleData.description || '',
-          navigationAccess: roleData.navigationAccess || [],
-          departmentAccess: roleData.departmentAccess || [],
-          status: roleData.status || 'active'
-        });
-      } else {
-        console.error('Role not found');
-        router.push('/roles/roles');
-      }
+      const roleData = response.data;
+      setFormData({
+        name: roleData.name || '',
+        description: roleData.description || '',
+        navigationAccess: roleData.navigationAccess || [],
+        permissions: roleData.permissions || [],
+        status: roleData.isActive ? 'active' : 'inactive'
+      });
     } catch (error) {
       console.error('Error fetching role:', error);
+      router.push('/roles/roles');
     } finally {
       setInitialLoading(false);
     }
@@ -140,13 +115,19 @@ const EditRole = () => {
     setLoading(true);
 
     try {
-      // Simulate API call with setTimeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real application, this would be an API call
-      console.log('Updating role:', formData);
-      
-      // For now, just redirect back to the roles list
+      const token = localStorage.getItem("token");
+      // Only send the required fields to the API
+      const apiData = {
+        name: formData.name,
+        description: formData.description,
+        isActive: formData.status === 'active'
+      };
+
+      await axios.patch(`${Base_url}roles/${roleId}`, apiData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       router.push('/roles/roles');
     } catch (error) {
       console.error('Error updating role:', error);
@@ -176,9 +157,9 @@ const EditRole = () => {
             <div className="box-body">
               <div className="flex border-b border-gray-200 mb-4">
                 <button
-                  className={`px-4 py-2 text-sm font-medium ${
+                  className={`px-4 py-2 text-sm font-medium rounded-t-lg focus:outline-none ${
                     activeTab === 'general'
-                      ? 'text-primary border-b-2 border-primary'
+                      ? 'bg-primary text-white'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                   onClick={() => setActiveTab('general')}
@@ -186,9 +167,9 @@ const EditRole = () => {
                   General Information
                 </button>
                 <button
-                  className={`px-4 py-2 text-sm font-medium ${
+                  className={`px-4 py-2 text-sm font-medium rounded-t-lg focus:outline-none ${
                     activeTab === 'access'
-                      ? 'text-primary border-b-2 border-primary'
+                      ? 'bg-primary text-white'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                   onClick={() => setActiveTab('access')}
@@ -268,31 +249,35 @@ const EditRole = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="form-label">Department Access</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        {departmentOptions.map((option) => (
-                          <div key={option.value} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id={`dept-${option.value}`}
-                              checked={formData.departmentAccess.includes(option.value)}
-                              onChange={(e) => {
-                                const newAccess = e.target.checked
-                                  ? [...formData.departmentAccess, option.value]
-                                  : formData.departmentAccess.filter(v => v !== option.value);
-                                setFormData(prev => ({
-                                  ...prev,
-                                  departmentAccess: newAccess
-                                }));
-                              }}
-                              className="form-checkbox"
-                            />
-                            <label htmlFor={`dept-${option.value}`} className="ml-2">
-                              {option.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
+                      <label className="form-label">Permissions</label>
+                      {loadingPermissions ? (
+                        <div className="text-center py-4">Loading permissions...</div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                          {permissions.map((permission) => (
+                            <div key={permission.id} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                id={`perm-${permission.id}`}
+                                checked={formData.permissions.includes(permission.id)}
+                                onChange={(e) => {
+                                  const newPermissions = e.target.checked
+                                    ? [...formData.permissions, permission.id]
+                                    : formData.permissions.filter(v => v !== permission.id);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    permissions: newPermissions
+                                  }));
+                                }}
+                                className="form-checkbox"
+                              />
+                              <label htmlFor={`perm-${permission.id}`} className="ml-2">
+                                {permission.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

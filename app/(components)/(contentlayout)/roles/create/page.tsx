@@ -1,16 +1,26 @@
 "use client";
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Pageheader from "@/shared/layout-components/page-header/pageheader";
 import Seo from "@/shared/layout-components/seo/seo";
 import ProtectedRoute from "@/shared/components/ProtectedRoute";
+import axios from 'axios';
+import { Base_url } from '@/app/api/config/BaseUrl';
 
 interface FormData {
   name: string;
   description: string;
   navigationAccess: string[];
-  departmentAccess: string[];
+  permissions: string[];
   status: string;
+}
+
+interface Permission {
+  id: string;
+  name: string;
+  description: string;
+  module: string;
+  isActive: boolean;
 }
 
 // Navigation menu options
@@ -24,15 +34,6 @@ const navigationOptions = [
   { value: 'settings', label: 'Settings' }
 ];
 
-// Department options
-const departmentOptions = [
-  { value: 'health', label: 'Health Insurance' },
-  { value: 'vehicle', label: 'Vehicle Insurance' },
-  { value: 'life', label: 'Life Insurance' },
-  { value: 'property', label: 'Property Insurance' },
-  { value: 'travel', label: 'Travel Insurance' }
-];
-
 const CreateRole = () => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('general');
@@ -40,10 +41,33 @@ const CreateRole = () => {
     name: '',
     description: '',
     navigationAccess: [],
-    departmentAccess: [],
+    permissions: [],
     status: 'active'
   });
   const [loading, setLoading] = useState(false);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
+
+  useEffect(() => {
+    fetchPermissions();
+  }, []);
+
+  const fetchPermissions = async () => {
+    try {
+      setLoadingPermissions(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}permissions`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setPermissions(response.data.results);
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -58,13 +82,19 @@ const CreateRole = () => {
     setLoading(true);
 
     try {
-      // Simulate API call with setTimeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real application, this would be an API call
-      console.log('Creating role:', formData);
-      
-      // For now, just redirect back to the roles list
+      const token = localStorage.getItem("token");
+      // Only send the required fields to the API
+      const apiData = {
+        name: formData.name,
+        description: formData.description,
+        isActive: formData.status === 'active'
+      };
+
+      await axios.post(`${Base_url}roles`, apiData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       router.push('/roles/roles');
     } catch (error) {
       console.error('Error creating role:', error);
@@ -178,31 +208,35 @@ const CreateRole = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="form-label">Department Access</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        {departmentOptions.map((option) => (
-                          <div key={option.value} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id={`dept-${option.value}`}
-                              checked={formData.departmentAccess.includes(option.value)}
-                              onChange={(e) => {
-                                const newAccess = e.target.checked
-                                  ? [...formData.departmentAccess, option.value]
-                                  : formData.departmentAccess.filter(v => v !== option.value);
-                                setFormData(prev => ({
-                                  ...prev,
-                                  departmentAccess: newAccess
-                                }));
-                              }}
-                              className="form-checkbox"
-                            />
-                            <label htmlFor={`dept-${option.value}`} className="ml-2">
-                              {option.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
+                      <label className="form-label">Permissions</label>
+                      {loadingPermissions ? (
+                        <div className="text-center py-4">Loading permissions...</div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                          {permissions.map((permission) => (
+                            <div key={permission.id} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                id={`perm-${permission.id}`}
+                                checked={formData.permissions.includes(permission.id)}
+                                onChange={(e) => {
+                                  const newPermissions = e.target.checked
+                                    ? [...formData.permissions, permission.id]
+                                    : formData.permissions.filter(v => v !== permission.id);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    permissions: newPermissions
+                                  }));
+                                }}
+                                className="form-checkbox"
+                              />
+                              <label htmlFor={`perm-${permission.id}`} className="ml-2">
+                                {permission.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

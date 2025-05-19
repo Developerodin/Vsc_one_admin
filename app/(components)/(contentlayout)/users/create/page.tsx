@@ -156,7 +156,113 @@ const CreateUser = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      await axios.post(`${Base_url}users`, formData, {
+
+      // Create a filtered version of formData that only includes non-empty values
+      const filteredData: any = {};
+
+      // Basic fields
+      if (formData.name) filteredData.name = formData.name;
+      if (formData.email) filteredData.email = formData.email;
+      if (formData.password) filteredData.password = formData.password;
+      if (formData.mobileNumber) filteredData.mobileNumber = formData.mobileNumber;
+      if (formData.role) filteredData.role = formData.role;
+      if (formData.status) filteredData.status = formData.status;
+      if (formData.onboardingStatus) filteredData.onboardingStatus = formData.onboardingStatus;
+      if (formData.profilePicture) filteredData.profilePicture = formData.profilePicture;
+
+      // Address - only include if at least one field is filled
+      if (Object.values(formData.address).some(value => value)) {
+        filteredData.address = {};
+        if (formData.address.street) filteredData.address.street = formData.address.street;
+        if (formData.address.city) filteredData.address.city = formData.address.city;
+        if (formData.address.state) filteredData.address.state = formData.address.state;
+        if (formData.address.pincode) filteredData.address.pincode = formData.address.pincode;
+        if (formData.address.country) filteredData.address.country = formData.address.country;
+      }
+
+      // KYC Details - only include if at least one field is filled
+      if (formData.kycStatus || formData.kycDetails.aadhaarNumber || formData.kycDetails.panNumber || formData.kycDetails.documents.length > 0) {
+        filteredData.kycStatus = formData.kycStatus;
+        filteredData.kycDetails = {};
+        
+        if (formData.kycDetails.aadhaarNumber) {
+          filteredData.kycDetails.aadhaarNumber = formData.kycDetails.aadhaarNumber;
+          filteredData.kycDetails.aadhaarVerified = formData.kycDetails.aadhaarVerified;
+          if (formData.kycDetails.aadhaarVerificationDate) {
+            filteredData.kycDetails.aadhaarVerificationDate = formData.kycDetails.aadhaarVerificationDate;
+          }
+        }
+        
+        if (formData.kycDetails.panNumber) {
+          filteredData.kycDetails.panNumber = formData.kycDetails.panNumber;
+          filteredData.kycDetails.panVerified = formData.kycDetails.panVerified;
+          if (formData.kycDetails.panVerificationDate) {
+            filteredData.kycDetails.panVerificationDate = formData.kycDetails.panVerificationDate;
+          }
+        }
+        
+        if (formData.kycDetails.documents.length > 0) {
+          filteredData.kycDetails.documents = formData.kycDetails.documents;
+        }
+      }
+
+      // Bank Accounts - only include if there are any accounts
+      if (formData.bankAccounts.length > 0) {
+        filteredData.bankAccounts = formData.bankAccounts;
+      }
+
+      // Statistics - only include if any value is non-zero
+      if (formData.totalCommission || formData.totalLeads || formData.totalSales || formData.lastLogin) {
+        if (formData.totalCommission) filteredData.totalCommission = formData.totalCommission;
+        if (formData.totalLeads) filteredData.totalLeads = formData.totalLeads;
+        if (formData.totalSales) filteredData.totalSales = formData.totalSales;
+        if (formData.lastLogin) filteredData.lastLogin = formData.lastLogin;
+      }
+
+      // Verification - only include if any verification is set
+      if (formData.isEmailVerified || formData.isMobileVerified || formData.emailVerification.token || formData.mobileVerification.token || formData.otp.code) {
+        if (formData.isEmailVerified) filteredData.isEmailVerified = formData.isEmailVerified;
+        if (formData.isMobileVerified) filteredData.isMobileVerified = formData.isMobileVerified;
+        
+        if (formData.emailVerification.token) {
+          filteredData.emailVerification = {
+            token: formData.emailVerification.token,
+            verified: formData.emailVerification.verified
+          };
+          if (formData.emailVerification.expiresAt) {
+            filteredData.emailVerification.expiresAt = formData.emailVerification.expiresAt;
+          }
+        }
+        
+        if (formData.mobileVerification.token) {
+          filteredData.mobileVerification = {
+            token: formData.mobileVerification.token,
+            verified: formData.mobileVerification.verified
+          };
+          if (formData.mobileVerification.expiresAt) {
+            filteredData.mobileVerification.expiresAt = formData.mobileVerification.expiresAt;
+          }
+        }
+        
+        if (formData.otp.code) {
+          filteredData.otp = {
+            code: formData.otp.code,
+            attempts: formData.otp.attempts
+          };
+          if (formData.otp.expiresAt) {
+            filteredData.otp.expiresAt = formData.otp.expiresAt;
+          }
+        }
+      }
+
+      // Metadata - only include if any field has content
+      if (formData.metadata.notes || formData.metadata.description) {
+        filteredData.metadata = {};
+        if (formData.metadata.notes) filteredData.metadata.notes = formData.metadata.notes;
+        if (formData.metadata.description) filteredData.metadata.description = formData.metadata.description;
+      }
+
+      await axios.post(`${Base_url}users`, filteredData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
