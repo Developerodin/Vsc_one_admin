@@ -125,7 +125,7 @@ const CreateRole = () => {
                 >
                   General Information
                 </button>
-                <button
+                {/* <button
                   className={`px-4 py-2 text-sm font-medium rounded-t-lg focus:outline-none ${
                     activeTab === 'access'
                       ? 'bg-primary text-white'
@@ -134,7 +134,7 @@ const CreateRole = () => {
                   onClick={() => setActiveTab('access')}
                 >
                   Access Control
-                </button>
+                </button> */}
               </div>
 
               <form onSubmit={handleSubmit}>

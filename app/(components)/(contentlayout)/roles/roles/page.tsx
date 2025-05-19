@@ -10,6 +10,14 @@ import * as XLSX from 'xlsx';
 import { Base_url } from '@/app/api/config/BaseUrl';
 import axios from 'axios';
 
+interface Permission {
+  id: string;
+  name: string;
+  description: string;
+  module: string;
+  isActive: boolean;
+}
+
 const Roles = () => {
   const router = useRouter();
   const [roles, setRoles] = useState<any[]>([]);
@@ -18,6 +26,12 @@ const Roles = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<any>(null);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [updatingPermissions, setUpdatingPermissions] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -28,6 +42,23 @@ const Roles = () => {
   useEffect(() => {
     fetchRoles();
   }, [pagination.page]);
+
+  const fetchPermissions = async () => {
+    try {
+      setLoadingPermissions(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}permissions`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setPermissions(response.data.results);
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
 
   const fetchRoles = async () => {
     try {
@@ -41,7 +72,6 @@ const Roles = () => {
 
       const { results, page, limit, totalPages, totalResults } = response.data;
       
-      // Update pagination state
       setPagination({
         page,
         limit,
@@ -49,7 +79,6 @@ const Roles = () => {
         totalResults
       });
 
-      // Format the data according to table headers
       const formattedData = results.map((role: any) => ({
         name: (
           <div className="flex items-center gap-2">
@@ -65,6 +94,15 @@ const Roles = () => {
           }`}>
             {role.isActive ? 'Active' : 'Inactive'}
           </span>
+        ),
+        permissionManager: (
+          <button
+            onClick={() => openPermissionModal(role)}
+            className="ti-btn ti-btn-primary !py-1 !px-2 !text-[0.75rem]"
+          >
+            <i className="ri-settings-4-line font-semibold align-middle mr-1"></i>
+            Manage Permissions
+          </button>
         ),
         actions: [
           {
@@ -91,6 +129,57 @@ const Roles = () => {
       console.error("Error fetching roles:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openPermissionModal = async (role: any) => {
+    setSelectedRole(role);
+    setShowPermissionModal(true);
+    try {
+      // First fetch the role's current permissions
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}role-permissions/roles/${role.id}/permissions`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      // Extract just the IDs from the permission objects
+      const currentPermissions = response?.data?.map((permission: any) => permission.id) || [];
+      console.log('Current permission IDs:', currentPermissions); // For debugging
+      setSelectedPermissions(currentPermissions);
+      
+      // Then fetch all available permissions
+      await fetchPermissions();
+    } catch (error) {
+      console.error('Error fetching role permissions:', error);
+      // If there's an error, still fetch available permissions
+      await fetchPermissions();
+    }
+  };
+
+  const handlePermissionUpdate = async () => {
+    if (!selectedRole) return;
+    
+    setUpdatingPermissions(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(`${Base_url}role-permissions/roles/${selectedRole.id}/permissions`, {
+        permissionIds: selectedPermissions
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.data) {
+        setShowPermissionModal(false);
+        fetchRoles(); // Refresh the roles list
+      }
+    } catch (error) {
+      console.error("Error updating permissions:", error);
+    } finally {
+      setUpdatingPermissions(false);
     }
   };
 
@@ -154,6 +243,7 @@ const Roles = () => {
   const headers = [
     { key: "name", label: "Role Name", sortable: true },
     { key: "description", label: "Description", sortable: false },
+    { key: "permissionManager", label: "Permission Manager", sortable: false },
     { key: "status", label: "Status", sortable: false },
     { key: "actions", label: "Actions", sortable: false },
   ];
@@ -199,6 +289,8 @@ const Roles = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -207,6 +299,69 @@ const Roles = () => {
         message="Are you sure you want to delete this role? This action cannot be undone."
         loading={deleteLoading}
       />
+
+      {/* Permission Management Modal */}
+      <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center ${showPermissionModal ? '' : 'hidden'}`}>
+        <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">
+              Manage Permissions - {selectedRole?.name}
+            </h3>
+            <button
+              onClick={() => setShowPermissionModal(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <i className="ri-close-line text-xl"></i>
+            </button>
+          </div>
+          
+          <div className="max-h-[60vh] overflow-y-auto">
+            {loadingPermissions ? (
+              <div className="text-center py-4">Loading permissions...</div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {permissions.map((permission) => (
+                  <div key={permission.id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`perm-${permission.id}`}
+                      checked={selectedPermissions.includes(permission.id)}
+                      onChange={(e) => {
+                        const newPermissions = e.target.checked
+                          ? [...selectedPermissions, permission.id]
+                          : selectedPermissions.filter(v => v !== permission.id);
+                        setSelectedPermissions(newPermissions);
+                      }}
+                      className="form-checkbox"
+                    />
+                    <label htmlFor={`perm-${permission.id}`} className="ml-2">
+                      {permission.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end space-x-2 mt-6">
+            <button
+              type="button"
+              className="ti-btn ti-btn-light"
+              onClick={() => setShowPermissionModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="ti-btn ti-btn-primary"
+              onClick={handlePermissionUpdate}
+              disabled={updatingPermissions}
+            >
+              {updatingPermissions ? 'Updating...' : 'Update Permissions'}
+            </button>
+          </div>
+        </div>
+      </div>
     </Fragment>
   );
 };
