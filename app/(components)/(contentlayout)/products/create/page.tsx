@@ -135,7 +135,10 @@ const CreateProduct = () => {
 
     const TypeOptions = [
         { value: 'insurance', label: 'Insurance' },
-        { value: 'banking', label: 'Banking' }
+        { value: 'banking', label: 'Banking' },
+        { value: 'project funding', label: 'Project Funding' },
+        { value: 'it sector', label: 'IT Sector' },
+        { value: 'capital market', label: 'Capital Market' }
     ];
 
     const StatusOptions = [

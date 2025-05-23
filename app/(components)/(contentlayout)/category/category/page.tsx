@@ -58,7 +58,8 @@ const Category = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${Base_url}categories`, {
+      console.log("token", token);
+      const response = await axios.get(`${Base_url}categories?limit=100`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
