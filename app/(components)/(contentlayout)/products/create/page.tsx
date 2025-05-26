@@ -12,7 +12,7 @@ import "react-datepicker/dist/react-datepicker.css";
 
 interface FormData {
     name: string;
-    type: 'insurance' | 'banking';
+    type: 'insurance' | 'banking' | 'project funding' | 'it sector' | 'capital market';
     categories: string[];
     description: string;
     features: string[];
@@ -33,8 +33,6 @@ interface FormData {
             validUntil: Date | null;
         }>;
     };
-    coverage: string;
-    duration: string;
     interestRate: number;
     loanAmount: {
         min: number;
@@ -44,6 +42,8 @@ interface FormData {
         min: number;
         max: number;
     };
+    coverage: string;
+    duration: string;
     status: 'active' | 'inactive' | 'draft';
     documents: Array<{
         name: string;
@@ -83,8 +83,6 @@ const CreateProduct = () => {
             currency: "INR",
             discounts: []
         },
-        coverage: "",
-        duration: "",
         interestRate: 0,
         loanAmount: {
             min: 0,
@@ -118,7 +116,7 @@ const CreateProduct = () => {
     const fetchCategories = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}categories`, {
+            const response = await axios.get(`${Base_url}categories?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

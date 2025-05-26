@@ -72,7 +72,7 @@ const Products = () => {
             const token = localStorage.getItem('token');
             
             // First get categories
-            const categoriesResponse = await axios.get(`${Base_url}categories`, {
+            const categoriesResponse = await axios.get(`${Base_url}categories?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
