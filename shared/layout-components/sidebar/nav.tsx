@@ -153,6 +153,16 @@ export const MenuItems: any = [
     dirchange: false
   },
 
+  {
+    icon: LeadIcon,
+    title: "Leads Fields",
+    type: "link",
+    path: "/leadsFields/leadsFields",
+    active: false,
+    selected: false,
+    dirchange: false
+  },
+
 
  
 ];
