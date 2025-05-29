@@ -477,7 +477,7 @@ const CreateLeads = () => {
                         </div>
                     ))}
 
-                    {/* {formData.customFields.length > 0 && (
+                    {formData.customFields.length > 0 && (
                         <div className="mt-4">
                             <button
                                 type="button"
@@ -487,7 +487,7 @@ const CreateLeads = () => {
                                 <i className="ri-add-line mr-2"></i> Add Another Field
                             </button>
                         </div>
-                    )} */}
+                    )}
                 </div>
             </div>
         );
