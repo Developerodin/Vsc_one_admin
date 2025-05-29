@@ -139,7 +139,7 @@ const Leads = () => {
                 agentName: agentName,
                 status: lead.status || '--',
                 product: productName,
-                leadTracking: <Link href={`/leads/timeline`} className="text-primary hover:text-primary-dark">View Timeline</Link>,
+                leadTracking: <Link href={`/leads/timeline?id=${lead.id}`} className="text-primary hover:text-primary-dark">View Timeline</Link>,
                 actions: [
                     {
                         icon: 'ri-eye-line',
@@ -267,9 +267,9 @@ const Leads = () => {
                                 >
                                     <i className="ri-file-excel-line font-semibold align-middle mr-1"></i> Export
                                 </button>
-                                <Link href="/leads/create" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                                {/* <Link href="/leads/create" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
                                     <i className="ri-add-line font-semibold align-middle"></i> Create Lead
-                                </Link>
+                                </Link> */}
                             </div>
                         </div>
                         <div className="box-body">

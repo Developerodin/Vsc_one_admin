@@ -7,144 +7,47 @@ import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import axios from "axios";
 import { Base_url } from "@/app/api/config/BaseUrl";
 import Select from "react-select";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-
-interface FormData {
-    agent: string;
-    customerName: string;
-    email: string;
-    mobileNumber: string;
-    status: 'new' | 'contacted' | 'interested' | 'followUp' | 'qualified' | 'proposal' | 'negotiation' | 'closed' | 'lost';
-    source: 'direct' | 'referral' | 'website' | 'social' | 'other';
-    products: Array<{
-        product: string;
-        status: 'interested' | 'proposed' | 'sold' | 'rejected';
-        notes: string;
-    }>;
-    requirements: string;
-    budget: {
-        amount: number;
-        currency: string;
-    };
-    followUps: Array<{
-        date: Date;
-        notes: string;
-        status: 'pending' | 'completed' | 'cancelled';
-        agent: string;
-    }>;
-    documents: Array<{
-        name: string;
-        url: string;
-        type: string;
-        uploadedAt: Date;
-    }>;
-    notes: Array<{
-        content: string;
-        createdBy: string;
-        createdAt: Date;
-    }>;
-    lastContact?: Date;
-    nextFollowUp?: Date;
-    address: {
-        street: string;
-        city: string;
-        state: string;
-        pincode: string;
-        country: string;
-    };
-    tags: string[];
-    metadata: {
-        [key: string]: any;
-    };
-}
 
 const EditLead = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const leadId = searchParams.get('id');
-    
+    const [leadData, setLeadData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState(0);
     const [users, setUsers] = useState<any[]>([]);
-    const [products, setProducts] = useState<any[]>([]);
-    const [currentUserId, setCurrentUserId] = useState<string>('');
-    const [formData, setFormData] = useState<FormData>({
-        agent: '',
-        customerName: '',
-        email: '',
-        mobileNumber: '',
-        status: 'new',
-        source: 'direct',
-        products: [],
-        requirements: '',
-        budget: {
-            amount: 0,
-            currency: 'INR'
-        },
-        followUps: [],
-        documents: [],
-        notes: [],
-        lastContact: new Date(),
-        nextFollowUp: new Date(),
-        address: {
-            street: '',
-            city: '',
-            state: '',
-            pincode: '',
-            country: 'India'
-        },
-        tags: [],
-        metadata: {}
-    });
+    const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState('overview');
+    
+    // Editable fields
+    const [selectedAgent, setSelectedAgent] = useState<string>('');
+    const [selectedStatus, setSelectedStatus] = useState<string>('');
 
     useEffect(() => {
         if (leadId) {
-            fetchLeadData();
+            fetchLeadDetails();
+            fetchUsers();
         } else {
             router.push('/leads/leads');
         }
-        fetchUsers();
-        fetchProducts();
-        // Get current user ID from localStorage or context
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        setCurrentUserId(user.id || '');
     }, [leadId]);
 
-    const fetchLeadData = async () => {
+    const fetchLeadDetails = async () => {
         try {
+            setInitialLoading(true);
             const token = localStorage.getItem('token');
             const response = await axios.get(`${Base_url}leads/${leadId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
-            
-            const leadData = response.data;
-            
-            // Format dates from strings to Date objects
-            const formattedData = {
-                ...leadData,
-                lastContact: leadData.lastContact ? new Date(leadData.lastContact) : undefined,
-                nextFollowUp: leadData.nextFollowUp ? new Date(leadData.nextFollowUp) : undefined,
-                followUps: leadData.followUps.map((f: any) => ({
-                    ...f,
-                    date: new Date(f.date)
-                })),
-                documents: leadData.documents.map((d: any) => ({
-                    ...d,
-                    uploadedAt: new Date(d.uploadedAt)
-                })),
-                notes: leadData.notes.map((n: any) => ({
-                    ...n,
-                    createdAt: new Date(n.createdAt)
-                }))
-            };
-            
-            setFormData(formattedData);
+            const data = response.data;
+            setLeadData(data);
+            setSelectedAgent(data.agent?.id || '');
+            setSelectedStatus(data.status || '');
         } catch (error) {
-            console.error('Error fetching lead:', error);
+            console.error('Error fetching lead details:', error);
+            setError('Failed to load lead details');
         } finally {
             setInitialLoading(false);
         }
@@ -158,131 +61,26 @@ const EditLead = () => {
                     Authorization: `Bearer ${token}`
                 }
             });
-            setUsers(response.data.results);
+            setUsers(response.data.results || []);
         } catch (error) {
             console.error('Error fetching users:', error);
         }
     };
 
-    const fetchProducts = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}products`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            setProducts(response.data.results);
-        } catch (error) {
-            console.error('Error fetching products:', error);
-        }
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        if (name.includes('.')) {
-            const [parent, child] = name.split('.');
-            setFormData(prev => ({
-                ...prev,
-                [parent]: {
-                    ...prev[parent as keyof typeof prev],
-                    [child]: value
-                }
-            }));
-        } else {
-            setFormData(prev => ({
-                ...prev,
-                [name]: value
-            }));
-        }
-    };
-
-    const handleSelectChange = (name: string, option: any) => {
-        if (option) {
-            setFormData(prev => ({
-                ...prev,
-                [name]: option.value
-            }));
-        }
-    };
-
-    const handleMultiSelectChange = (name: string, options: any[]) => {
-        if (options) {
-            setFormData(prev => ({
-                ...prev,
-                [name]: options.map(option => option.value)
-            }));
-        }
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!selectedAgent || !selectedStatus) {
+            alert('Please select both agent and status');
+            return;
+        }
+
         setLoading(true);
         try {
-            // Validate required fields
-            if (!formData.agent || !formData.customerName || !formData.mobileNumber || !formData.source) {
-                alert('Please fill in all required fields');
-                setLoading(false);
-                return;
-            }
-
-            // Validate email format if provided
-            if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-                alert('Please enter a valid email address');
-                setLoading(false);
-                return;
-            }
-
-            // Format the data to match the API structure
-            const formattedData = {
-                agent: formData.agent,
-                customerName: formData.customerName,
-                email: formData.email,
-                mobileNumber: formData.mobileNumber,
-                status: formData.status,
-                source: formData.source,
-                products: formData.products.map(p => ({
-                    product: p.product,
-                    status: p.status,
-                    notes: p.notes
-                })),
-                requirements: formData.requirements,
-                budget: {
-                    amount: Number(formData.budget.amount),
-                    currency: formData.budget.currency
-                },
-                followUps: formData.followUps.map(f => ({
-                    date: f.date.toISOString(),
-                    notes: f.notes,
-                    status: f.status,
-                    agent: f.agent
-                })),
-                documents: formData.documents.map(d => ({
-                    name: d.name,
-                    url: d.url,
-                    type: d.type,
-                    uploadedAt: d.uploadedAt.toISOString()
-                })),
-                notes: formData.notes.map(n => ({
-                    content: n.content,
-                    createdBy: n.createdBy,
-                    createdAt: n.createdAt.toISOString()
-                })),
-                lastContact: formData.lastContact?.toISOString(),
-                nextFollowUp: formData.nextFollowUp?.toISOString(),
-                address: {
-                    street: formData.address.street,
-                    city: formData.address.city,
-                    state: formData.address.state,
-                    pincode: formData.address.pincode,
-                    country: formData.address.country
-                },
-                tags: formData.tags,
-                metadata: formData.metadata
-            };
-
             const token = localStorage.getItem('token');
-            await axios.patch(`${Base_url}leads/${leadId}`, formattedData, {
+            await axios.patch(`${Base_url}leads/${leadId}`, {
+                agent: selectedAgent,
+                status: selectedStatus
+            }, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -290,13 +88,31 @@ const EditLead = () => {
             router.push('/leads/leads');
         } catch (error: any) {
             console.error('Error updating lead:', error);
-            if (error.response?.data?.message) {
-                alert(error.response.data.message);
-            } else {
-                alert('Error updating lead. Please try again.');
-            }
+            alert(error.response?.data?.message || 'Error updating lead. Please try again.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const formatDate = (dateString: string) => {
+        if (!dateString) return '--';
+        return new Date(dateString).toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const getStatusBadgeColor = (status: string) => {
+        switch (status?.toLowerCase()) {
+            case 'new': return 'bg-primary';
+            case 'contacted': return 'bg-primary';
+            case 'interested': return 'bg-primary';
+            case 'qualified': return 'bg-primary';
+            case 'closed': return 'bg-primary';
+            default: return 'bg-gray-400';
         }
     };
 
@@ -312,650 +128,306 @@ const EditLead = () => {
         { value: 'lost', label: 'Lost' }
     ];
 
-    const SourceOptions = [
-        { value: 'direct', label: 'Direct' },
-        { value: 'referral', label: 'Referral' },
-        { value: 'website', label: 'Website' },
-        { value: 'social', label: 'Social Media' },
-        { value: 'other', label: 'Other' }
-    ];
-
-    const ProductStatusOptions = [
-        { value: 'interested', label: 'Interested' },
-        { value: 'proposed', label: 'Proposed' },
-        { value: 'sold', label: 'Sold' },
-        { value: 'rejected', label: 'Rejected' }
-    ];
-
-    const FollowUpStatusOptions = [
-        { value: 'pending', label: 'Pending' },
-        { value: 'completed', label: 'Completed' },
-        { value: 'cancelled', label: 'Cancelled' }
-    ];
-
-    const CurrencyOptions = [
-        { value: 'INR', label: 'INR' },
-        { value: 'USD', label: 'USD' },
-        { value: 'EUR', label: 'EUR' }
-    ];
-
     const tabs = [
-        { id: 0, label: 'Basic Info' },
-        { id: 1, label: 'Products' },
-        { id: 2, label: 'Requirements & Budget' },
-        { id: 3, label: 'Follow Ups' },
-        { id: 4, label: 'Documents' },
-        { id: 5, label: 'Notes' },
-        { id: 6, label: 'Address' },
-        { id: 7, label: 'Metadata' }
+        { id: 'overview', label: 'Lead Overview', icon: 'ri-file-list-3-line' },
+        { id: 'customer', label: 'Customer Information', icon: 'ri-user-line' },
+        { id: 'product', label: 'Product Information', icon: 'ri-product-hunt-line' },
+        { id: 'category', label: 'Category & Subcategory', icon: 'ri-folder-line' }
     ];
 
     if (initialLoading) {
-        return <div className="text-center py-4">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (error || !leadData) {
+        return (
+            <Fragment>
+                <Seo title="Edit Lead" />
+                <Pageheader currentpage="Edit Lead" activepage="Leads" mainpage="Leads" />
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <i className="ri-error-warning-line text-6xl text-red-500 mb-4"></i>
+                        <h3 className="text-xl font-semibold mb-2">Error Loading Lead</h3>
+                        <p className="text-gray-500 mb-4">{error || 'Lead not found'}</p>
+                        <button 
+                            onClick={() => router.push('/leads/leads')}
+                            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors flex items-center gap-2"
+                        >
+                            <i className="ri-arrow-left-line"></i>
+                            Back to Leads
+                        </button>
+                    </div>
+                </div>
+            </Fragment>
+        );
     }
 
     return (
         <Fragment>
             <Seo title="Edit Lead" />
             <Pageheader currentpage="Edit Lead" activepage="Leads" mainpage="Leads" />
+            
             <div className="grid grid-cols-12 gap-6">
                 <div className="col-span-12">
                     <div className="box">
                         <div className="box-header">
-                            <h5 className="box-title">Edit Lead</h5>
+                            <div className="flex items-center justify-between w-full">
+                                <h5 className="box-title">Edit Lead</h5>
+                                <div className="flex items-center gap-3">
+                                    <span className={`badge ${getStatusBadgeColor(selectedStatus)} text-white px-3 py-1`}>
+                                        {selectedStatus || '--'}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push('/leads/leads')}
+                                        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors flex items-center gap-2"
+                                    >
+                                        <i className="ri-arrow-left-line"></i>
+                                        Back to Leads
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div className="box-body">
-                            <form onSubmit={handleSubmit}>
-                                <div className="flex border-b border-gray-200">
-                                    {tabs.map(tab => (
+                            {/* Tab Navigation */}
+                            <div className="border-b border-gray-200 mb-6">
+                                <nav className="-mb-px flex space-x-2">
+                                    {tabs.map((tab) => (
                                         <button
                                             key={tab.id}
                                             type="button"
-                                            className={`px-4 py-2 text-sm font-medium rounded-t-lg focus:outline-none ${
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`py-2 px-4 rounded-t-lg font-medium text-sm flex items-center gap-2 transition-colors ${
                                                 activeTab === tab.id
                                                     ? 'bg-primary text-white'
-                                                    : 'text-gray-500 hover:text-gray-700'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                                             }`}
-                                            onClick={() => setActiveTab(tab.id)}
                                         >
+                                            <i className={tab.icon}></i>
                                             {tab.label}
                                         </button>
                                     ))}
-                                </div>
+                                </nav>
+                            </div>
 
-                                <div className="mt-4">
-                                    {activeTab === 0 && (
+                            <form onSubmit={handleSubmit}>
+                                {/* Lead Overview Tab */}
+                                {activeTab === 'overview' && (
+                                    <div className="space-y-6">
                                         <div className="grid grid-cols-12 gap-4">
-                                            <div className="col-span-12">
-                                                <label className="form-label">Customer Name *</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="customerName"
-                                                    value={formData.customerName}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter Customer Name"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">Email</label>
-                                                <input
-                                                    type="email"
-                                                    className="form-control"
-                                                    name="email"
-                                                    value={formData.email}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter Email"
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">Mobile Number *</label>
-                                                <input
-                                                    type="tel"
-                                                    className="form-control"
-                                                    name="mobileNumber"
-                                                    value={formData.mobileNumber}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter Mobile Number"
-                                                    required
-                                                    pattern="[0-9]{10}"
-                                                    title="Please enter a valid 10-digit mobile number"
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">Status *</label>
-                                                <Select
-                                                    options={StatusOptions}
-                                                    value={StatusOptions.find(option => option.value === formData.status)}
-                                                    onChange={(option) => handleSelectChange('status', option)}
-                                                    placeholder="Select Status"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">Source *</label>
-                                                <Select
-                                                    options={SourceOptions}
-                                                    value={SourceOptions.find(option => option.value === formData.source)}
-                                                    onChange={(option) => handleSelectChange('source', option)}
-                                                    placeholder="Select Source"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">Agent *</label>
-                                                <Select
-                                                    options={users.map(user => ({ value: user.id, label: user.name }))}
-                                                    value={users.find(user => user.id === formData.agent) ? 
-                                                        { value: formData.agent, label: users.find(user => user.id === formData.agent)?.name } : 
-                                                        null}
-                                                    onChange={(option) => handleSelectChange('agent', option)}
-                                                    placeholder="Select Agent"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">Tags</label>
-                                                <Select
-                                                    isMulti
-                                                    options={formData.tags.map(tag => ({ value: tag, label: tag }))}
-                                                    value={formData.tags.map(tag => ({ value: tag, label: tag }))}
-                                                    onChange={(options) => handleMultiSelectChange('tags', options)}
-                                                    placeholder="Select Tags"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeTab === 1 && (
-                                        <div className="grid grid-cols-12 gap-4">
-                                            <div className="col-span-12">
-                                                <label className="form-label">Products</label>
-                                                <Select
-                                                    isMulti
-                                                    options={products.map(product => ({ value: product.id, label: product.name }))}
-                                                    value={formData.products.map(p => {
-                                                        const product = products.find(prod => prod.id === p.product);
-                                                        return {
-                                                            value: p.product,
-                                                            label: product?.name || ''
-                                                        };
-                                                    })}
-                                                    onChange={(options) => {
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            products: options.map(option => ({
-                                                                product: option.value,
-                                                                status: 'interested',
-                                                                notes: ''
-                                                            }))
-                                                        }));
-                                                    }}
-                                                    placeholder="Select Products"
-                                                />
-                                            </div>
-                                            {formData.products.map((product, index) => (
-                                                <div key={index} className="col-span-12 grid grid-cols-12 gap-4">
-                                                    <div className="col-span-6">
-                                                        <label className="form-label">Status</label>
+                                            {/* Basic Info */}
+                                            <div className="col-span-12 md:col-span-6">
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="text-sm font-medium text-gray-600">Source</label>
+                                                        <p className="text-sm font-semibold capitalize">{leadData.source || '--'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-sm font-medium text-gray-600">Agent *</label>
                                                         <Select
-                                                            options={ProductStatusOptions}
-                                                            value={ProductStatusOptions.find(option => option.value === product.status)}
-                                                            onChange={(option) => {
-                                                                const newProducts = [...formData.products];
-                                                                if (option) {
-                                                                    newProducts[index].status = option.value as 'interested' | 'proposed' | 'sold' | 'rejected';
-                                                                    setFormData(prev => ({
-                                                                        ...prev,
-                                                                        products: newProducts
-                                                                    }));
-                                                                }
-                                                            }}
-                                                            placeholder="Select Status"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-6">
-                                                        <label className="form-label">Notes</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={product.notes}
-                                                            onChange={(e) => {
-                                                                const newProducts = [...formData.products];
-                                                                newProducts[index].notes = e.target.value;
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    products: newProducts
-                                                                }));
-                                                            }}
-                                                            placeholder="Enter Notes"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {activeTab === 2 && (
-                                        <div className="grid grid-cols-12 gap-4">
-                                            <div className="col-span-12">
-                                                <label className="form-label">Requirements</label>
-                                                <textarea
-                                                    className="form-control"
-                                                    name="requirements"
-                                                    value={formData.requirements}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter Requirements"
-                                                    rows={4}
-                                                />
-                                            </div>
-                                            <div className="col-span-6">
-                                                <label className="form-label">Budget Amount</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    name="budget.amount"
-                                                    value={formData.budget.amount}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter Amount"
-                                                />
-                                            </div>
-                                            <div className="col-span-6">
-                                                <label className="form-label">Currency</label>
-                                                <Select
-                                                    options={CurrencyOptions}
-                                                    value={CurrencyOptions.find(option => option.value === formData.budget.currency)}
-                                                    onChange={(option) => {
-                                                        if (option) {
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                budget: {
-                                                                    ...prev.budget,
-                                                                    currency: option.value
-                                                                }
-                                                            }));
-                                                        }
-                                                    }}
-                                                    placeholder="Select Currency"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeTab === 3 && (
-                                        <div className="grid grid-cols-12 gap-4">
-                                            <div className="col-span-12">
-                                                <button
-                                                    type="button"
-                                                    className="ti-btn ti-btn-primary"
-                                                    onClick={() => {
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            followUps: [
-                                                                ...prev.followUps,
-                                                                {
-                                                                    date: new Date(),
-                                                                    notes: '',
-                                                                    status: 'pending',
-                                                                    agent: ''
-                                                                }
-                                                            ]
-                                                        }));
-                                                    }}
-                                                >
-                                                    Add Follow Up
-                                                </button>
-                                            </div>
-                                            {formData.followUps.map((followUp, index) => (
-                                                <div key={index} className="col-span-12 grid grid-cols-12 gap-4">
-                                                    <div className="col-span-3">
-                                                        <label className="form-label">Date</label>
-                                                        <DatePicker
-                                                            selected={followUp.date}
-                                                            onChange={(date) => {
-                                                                const newFollowUps = [...formData.followUps];
-                                                                newFollowUps[index].date = date || new Date();
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    followUps: newFollowUps
-                                                                }));
-                                                            }}
-                                                            className="form-control"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-3">
-                                                        <label className="form-label">Status</label>
-                                                        <Select
-                                                            options={FollowUpStatusOptions}
-                                                            value={FollowUpStatusOptions.find(option => option.value === followUp.status)}
-                                                            onChange={(option) => {
-                                                                const newFollowUps = [...formData.followUps];
-                                                                if (option) {
-                                                                    newFollowUps[index].status = option.value as 'pending' | 'completed' | 'cancelled';
-                                                                    setFormData(prev => ({
-                                                                        ...prev,
-                                                                        followUps: newFollowUps
-                                                                    }));
-                                                                }
-                                                            }}
-                                                            placeholder="Select Status"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-3">
-                                                        <label className="form-label">Agent</label>
-                                                        <Select
-                                                            options={users.map(user => ({ value: user.id, label: user.name }))}
-                                                            value={users.find(user => user.id === followUp.agent) ? 
-                                                                { value: followUp.agent, label: users.find(user => user.id === followUp.agent)?.name } : 
+                                                            options={users.map(user => ({ value: user.id, label: user.name || user.email }))}
+                                                            value={users.find(user => user.id === selectedAgent) ? 
+                                                                { value: selectedAgent, label: users.find(user => user.id === selectedAgent)?.name || users.find(user => user.id === selectedAgent)?.email } : 
                                                                 null}
-                                                            onChange={(option) => {
-                                                                const newFollowUps = [...formData.followUps];
-                                                                newFollowUps[index].agent = option?.value || '';
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    followUps: newFollowUps
-                                                                }));
-                                                            }}
+                                                            onChange={(option) => setSelectedAgent(option?.value || '')}
                                                             placeholder="Select Agent"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-3">
-                                                        <label className="form-label">Notes</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={followUp.notes}
-                                                            onChange={(e) => {
-                                                                const newFollowUps = [...formData.followUps];
-                                                                newFollowUps[index].notes = e.target.value;
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    followUps: newFollowUps
-                                                                }));
-                                                            }}
-                                                            placeholder="Enter Notes"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {activeTab === 4 && (
-                                        <div className="grid grid-cols-12 gap-4">
-                                            <div className="col-span-12">
-                                                <button
-                                                    type="button"
-                                                    className="ti-btn ti-btn-primary"
-                                                    onClick={() => {
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            documents: [
-                                                                ...prev.documents,
-                                                                {
-                                                                    name: '',
-                                                                    url: '',
-                                                                    type: '',
-                                                                    uploadedAt: new Date()
-                                                                }
-                                                            ]
-                                                        }));
-                                                    }}
-                                                >
-                                                    Add Document
-                                                </button>
-                                            </div>
-                                            {formData.documents.map((document, index) => (
-                                                <div key={index} className="col-span-12 grid grid-cols-12 gap-4">
-                                                    <div className="col-span-3">
-                                                        <label className="form-label">Name *</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={document.name}
-                                                            onChange={(e) => {
-                                                                const newDocuments = [...formData.documents];
-                                                                newDocuments[index].name = e.target.value;
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    documents: newDocuments
-                                                                }));
-                                                            }}
-                                                            placeholder="Enter Name"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-3">
-                                                        <label className="form-label">URL *</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={document.url}
-                                                            onChange={(e) => {
-                                                                const newDocuments = [...formData.documents];
-                                                                newDocuments[index].url = e.target.value;
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    documents: newDocuments
-                                                                }));
-                                                            }}
-                                                            placeholder="Enter URL"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-3">
-                                                        <label className="form-label">Type *</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={document.type}
-                                                            onChange={(e) => {
-                                                                const newDocuments = [...formData.documents];
-                                                                newDocuments[index].type = e.target.value;
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    documents: newDocuments
-                                                                }));
-                                                            }}
-                                                            placeholder="Enter Type"
                                                             required
                                                         />
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {activeTab === 5 && (
-                                        <div className="grid grid-cols-12 gap-4">
-                                            <div className="col-span-12">
-                                                <button
-                                                    type="button"
-                                                    className="ti-btn ti-btn-primary"
-                                                    onClick={() => {
-                                                        if (!currentUserId) {
-                                                            alert('User ID not found. Please log in again.');
-                                                            return;
-                                                        }
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            notes: [
-                                                                ...prev.notes,
-                                                                {
-                                                                    content: '',
-                                                                    createdBy: currentUserId,
-                                                                    createdAt: new Date()
-                                                                }
-                                                            ]
-                                                        }));
-                                                    }}
-                                                >
-                                                    Add Note
-                                                </button>
                                             </div>
-                                            {formData.notes.map((note, index) => (
-                                                <div key={index} className="col-span-12">
-                                                    <label className="form-label">Note Content</label>
-                                                    <textarea
-                                                        className="form-control"
-                                                        value={note.content}
-                                                        onChange={(e) => {
-                                                            const newNotes = [...formData.notes];
-                                                            newNotes[index] = {
-                                                                ...newNotes[index],
-                                                                content: e.target.value,
-                                                                createdBy: currentUserId,
-                                                                createdAt: new Date()
-                                                            };
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                notes: newNotes
-                                                            }));
-                                                        }}
-                                                        placeholder="Enter Note Content"
-                                                        rows={3}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {activeTab === 6 && (
-                                        <div className="grid grid-cols-12 gap-4">
-                                            <div className="col-span-12">
-                                                <label className="form-label">Street</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="address.street"
-                                                    value={formData.address.street}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter Street"
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">City</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="address.city"
-                                                    value={formData.address.city}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter City"
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">State</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="address.state"
-                                                    value={formData.address.state}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter State"
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">Pincode</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="address.pincode"
-                                                    value={formData.address.pincode}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter Pincode"
-                                                />
-                                            </div>
-                                            <div className="col-span-12">
-                                                <label className="form-label">Country</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="address.country"
-                                                    value={formData.address.country}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Enter Country"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeTab === 7 && (
-                                        <div className="grid grid-cols-12 gap-4">
-                                            <div className="col-span-12">
-                                                <button
-                                                    type="button"
-                                                    className="ti-btn ti-btn-primary"
-                                                    onClick={() => {
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            metadata: {
-                                                                ...prev.metadata,
-                                                                '': ''
-                                                            }
-                                                        }));
-                                                    }}
-                                                >
-                                                    Add Metadata
-                                                </button>
-                                            </div>
-                                            {Object.entries(formData.metadata).map(([key, value], index) => (
-                                                <div key={index} className="col-span-12 grid grid-cols-12 gap-4">
-                                                    <div className="col-span-6">
-                                                        <label className="form-label">Key</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={key}
-                                                            onChange={(e) => {
-                                                                const newMetadata = { ...formData.metadata };
-                                                                delete newMetadata[key];
-                                                                newMetadata[e.target.value] = value;
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    metadata: newMetadata
-                                                                }));
-                                                            }}
-                                                            placeholder="Enter Key"
+                                            
+                                            {/* Dates and Status */}
+                                            <div className="col-span-12 md:col-span-6">
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="text-sm font-medium text-gray-600">Status *</label>
+                                                        <Select
+                                                            options={StatusOptions}
+                                                            value={StatusOptions.find(option => option.value === selectedStatus)}
+                                                            onChange={(option) => setSelectedStatus(option?.value || '')}
+                                                            placeholder="Select Status"
+                                                            required
                                                         />
                                                     </div>
-                                                    <div className="col-span-6">
-                                                        <label className="form-label">Value</label>
-                                                        <input
-                                                            type="text"
-                                                            className="form-control"
-                                                            value={value}
-                                                            onChange={(e) => {
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    metadata: {
-                                                                        ...prev.metadata,
-                                                                        [key]: e.target.value
-                                                                    }
-                                                                }));
-                                                            }}
-                                                            placeholder="Enter Value"
-                                                        />
+                                                    <div>
+                                                        <label className="text-sm font-medium text-gray-600">Last Contact</label>
+                                                        <p className="text-sm font-semibold">{formatDate(leadData.lastContact)}</p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-sm font-medium text-gray-600">Next Follow Up</label>
+                                                        <p className="text-sm font-semibold">{formatDate(leadData.nextFollowUp)}</p>
                                                     </div>
                                                 </div>
-                                            ))}
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
 
-                                <div className="mt-4 flex justify-end gap-2">
+                                {/* Customer Information Tab */}
+                                {activeTab === 'customer' && (
+                                    <div className="space-y-6">
+                                        {leadData.fieldsData && Object.keys(leadData.fieldsData).length > 0 ? (
+                                            <div className="grid grid-cols-12 gap-4">
+                                                {Object.entries(leadData.fieldsData).map(([key, value]: [string, any]) => (
+                                                    <div key={key} className="col-span-12 md:col-span-6">
+                                                        <div className="space-y-1">
+                                                            <label className="text-sm font-medium text-gray-600">{key}</label>
+                                                            <p className="text-sm font-semibold p-2 bg-gray-50 rounded border">{value || '--'}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <i className="ri-user-line text-4xl text-gray-400 mb-4"></i>
+                                                <p className="text-gray-500">No customer information available</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Product Information Tab */}
+                                {activeTab === 'product' && (
+                                    <div className="space-y-6">
+                                        {leadData.products && leadData.products.length > 0 ? (
+                                            <div className="space-y-4">
+                                                {leadData.products.map((productItem: any, index: number) => (
+                                                    <div key={index} className="border rounded-lg p-4">
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <h6 className="font-semibold">{productItem.product?.name || 'Product'}</h6>
+                                                            <span className={`badge ${getStatusBadgeColor(productItem.status)} text-white`}>
+                                                                {productItem.status || '--'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-12 gap-4">
+                                                            <div className="col-span-12 md:col-span-6">
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-sm text-gray-600">Type:</span>
+                                                                        <span className="text-sm font-medium capitalize">{productItem.product?.type || '--'}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-sm text-gray-600">Base Price:</span>
+                                                                        <span className="text-sm font-medium">₹{productItem.product?.pricing?.basePrice?.toLocaleString() || '--'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="col-span-12 md:col-span-6">
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-sm text-gray-600">Commission:</span>
+                                                                        <span className="text-sm font-medium">{productItem.product?.commission?.percentage || '--'}%</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            {productItem.product?.description && (
+                                                                <div className="col-span-12">
+                                                                    <div>
+                                                                        <span className="text-sm text-gray-600">Description:</span>
+                                                                        <p className="text-sm font-medium mt-1 p-2 bg-gray-50 rounded border">{productItem.product.description}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <i className="ri-product-hunt-line text-4xl text-gray-400 mb-4"></i>
+                                                <p className="text-gray-500">No product information available</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Category Information Tab */}
+                                {activeTab === 'category' && (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-12 gap-4">
+                                            <div className="col-span-12 md:col-span-6">
+                                                <div className="border rounded-lg p-4">
+                                                    <h6 className="font-semibold mb-3 flex items-center gap-2">
+                                                        <i className="ri-folder-line"></i>
+                                                        Category
+                                                    </h6>
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <label className="text-sm font-medium text-gray-600">Name</label>
+                                                            <p className="text-sm font-semibold p-2 bg-gray-50 rounded border">{leadData.category?.name || '--'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-sm font-medium text-gray-600">Type</label>
+                                                            <p className="text-sm font-semibold p-2 bg-gray-50 rounded border capitalize">{leadData.category?.type || '--'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-sm font-medium text-gray-600">Status</label>
+                                                            <div className="mt-1">
+                                                                <span className={`badge ${leadData.category?.status === 'active' ? 'bg-primary' : 'bg-primary'} text-white`}>
+                                                                    {leadData.category?.status || '--'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        {leadData.category?.description && (
+                                                            <div>
+                                                                <label className="text-sm font-medium text-gray-600">Description</label>
+                                                                <p className="text-sm font-medium p-2 bg-gray-50 rounded border mt-1">{leadData.category.description}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="col-span-12 md:col-span-6">
+                                                <div className="border rounded-lg p-4">
+                                                    <h6 className="font-semibold mb-3 flex items-center gap-2">
+                                                        <i className="ri-folder-open-line"></i>
+                                                        Subcategory
+                                                    </h6>
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <label className="text-sm font-medium text-gray-600">Name</label>
+                                                            <p className="text-sm font-semibold p-2 bg-gray-50 rounded border">{leadData.subcategory?.name || '--'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-sm font-medium text-gray-600">Status</label>
+                                                            <div className="mt-1">
+                                                                <span className={`badge ${leadData.subcategory?.status === 'active' ? 'bg-primary' : 'bg-primary'} text-white`}>
+                                                                    {leadData.subcategory?.status || '--'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        {leadData.subcategory?.description && (
+                                                            <div>
+                                                                <label className="text-sm font-medium text-gray-600">Description</label>
+                                                                <p className="text-sm font-medium p-2 bg-gray-50 rounded border mt-1">{leadData.subcategory.description}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons - Show on all tabs */}
+                                <div className="flex justify-end gap-2 pt-6 border-t">
                                     <button
                                         type="button"
-                                        className="ti-btn ti-btn-light hover:bg-gray-100"
                                         onClick={() => router.push('/leads/leads')}
+                                        className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
-                                        className="ti-btn ti-btn-primary-full"
                                         disabled={loading}
+                                        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         {loading ? 'Updating...' : 'Update Lead'}
                                     </button>
