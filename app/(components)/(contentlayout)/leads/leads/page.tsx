@@ -18,7 +18,6 @@ interface Lead {
     id: string;
     srNo: number;
     agentName: string;
-    customerName: string;
     status: string;
     product: string;
     leadTracking: JSX.Element;
@@ -58,11 +57,7 @@ const Leads = () => {
         const fetchAllData = async () => {
             try {
                 setLoading(true);
-                await Promise.all([
-                    fetchUsers(),
-                    fetchProducts(),
-                    fetchRawLeads()
-                ]);
+                await fetchRawLeads();
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setError('Failed to fetch data');
@@ -74,12 +69,12 @@ const Leads = () => {
         fetchAllData();
     }, []);
 
-    // Update formatted leads whenever users, products, or raw leads change
+    // Update formatted leads whenever raw leads change
     useEffect(() => {
-        if (users.length > 0 && products.length > 0 && rawLeads.length > 0) {
+        if (rawLeads.length > 0) {
             formatLeadsData();
         }
-    }, [users, products, rawLeads]);
+    }, [rawLeads]);
 
     const fetchUsers = async () => {
         try {
@@ -128,27 +123,20 @@ const Leads = () => {
     };
 
     const formatLeadsData = () => {
-        const formattedData = rawLeads.map((lead: RawLead, index: number) => {
-            // Find agent name from users data
-            const agent = users.find(user => user.id === lead.agent);
-            console.log('Found agent:', agent, 'for lead agent:', lead.agent);
+        const formattedData = rawLeads.map((lead: any, index: number) => {
+            // Get agent name from the agent object (which is now a full object, not just an ID)
+            const agentName = lead.agent?.name || lead.agent?.email || '--';
             
-            // Debug product data
-            console.log('Lead products data:', lead.products);
-            
-            // Find product name from products data
+            // Get product name from the nested products structure
             let productName = '--';
             if (lead.products && lead.products.length > 0) {
-                const product = products.find(prod => prod.id === lead.products[0].id);
-                console.log('Found product:', product, 'for lead product ID:', lead.products[0].id);
-                productName = product?.name || lead.products[0].name || '--';
+                productName = lead.products[0]?.product?.name || '--';
             }
 
             return {
                 id: lead.id,
                 srNo: index + 1,
-                agentName: agent?.name || '--',
-                customerName: lead.customerName || '--',
+                agentName: agentName,
                 status: lead.status || '--',
                 product: productName,
                 leadTracking: <Link href={`/leads/timeline`} className="text-primary hover:text-primary-dark">View Timeline</Link>,
@@ -156,7 +144,7 @@ const Leads = () => {
                     {
                         icon: 'ri-eye-line',
                         className: 'ti-btn-primary',
-                        href: `/leads/${lead.id}`
+                        href: `/leads/view?id=${lead.id}`
                     },
                     {
                         icon: 'ri-edit-line',
@@ -236,7 +224,6 @@ const Leads = () => {
 
     const headers = [
         { key: 'agentName', label: 'Agent Name' , sortable: true},
-        { key: 'customerName', label: 'Customer Name' , sortable: true},
         { key: 'status', label: 'Status' , sortable: false},
         { key: 'product', label: 'Product' , sortable: false},
         { key: 'leadTracking', label: 'Lead Tracking' , sortable: false},
@@ -248,7 +235,6 @@ const Leads = () => {
         const exportData = leads.map(lead => ({
             'Sr No': lead.srNo,
             'Agent Name': lead.agentName,
-            'Customer Name': lead.customerName,
             'Status': lead.status,
             'Product': lead.product
         }));
