@@ -45,7 +45,7 @@ const Users = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${Base_url}users`, {
+      const response = await axios.get(`${Base_url}users?limit=100`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -55,8 +55,16 @@ const Users = () => {
       const formattedData = response.data.results.map((user: any) => ({
         profile: (
           <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <i className="ri-user-line text-xl text-primary"></i>
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+              {user.profilePicture ? (
+                <img 
+                  src={user.profilePicture} 
+                  alt={`${user.name}'s profile`}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <i className="ri-user-line text-xl text-primary"></i>
+              )}
             </div>
           </div>
         ),

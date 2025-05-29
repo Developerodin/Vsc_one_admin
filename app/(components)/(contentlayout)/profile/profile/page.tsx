@@ -55,7 +55,11 @@ const Profile = () => {
                             <div className="sm:flex items-start p-6 main-profile-cover">
                                 <div>
                                     <span className="avatar avatar-xxl avatar-rounded online me-4">
-                                        <img src="../../assets/images/faces/9.jpg" alt="" />
+                                        {userData?.profilePicture ? (
+                                            <img src={userData.profilePicture} alt="Profile" />
+                                        ) : (
+                                            <i className="ri-user-line text-4xl"></i>
+                                        )}
                                     </span>
                                 </div>
                                 <div className="flex-grow main-profile-info">
@@ -109,36 +113,6 @@ const Profile = () => {
                                     </p>
                                 </div>
                             </div>
-                            <div className="p-6 border-b dark:border-defaultborder/10 border-dashed sm:flex items-center">
-                                <p className="text-[.9375rem] mb-2 me-6 font-semibold">Social Networks :</p>
-                                <div className="btn-list mb-0">
-                                    <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-primary text-primary me-[.375rem] mb-1">
-                                        <i className="ri-facebook-line font-semibold"></i>
-                                    </button>
-                                    <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-secondary me-[.375rem] mb-1">
-                                        <i className="ri-twitter-x-line font-semibold"></i>
-                                    </button>
-                                    <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-warning me-[.375rem] mb-1">
-                                        <i className="ri-instagram-line font-semibold"></i>
-                                    </button>
-                                    <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-success me-[.375rem] mb-1">
-                                        <i className="ri-github-line font-semibold"></i>
-                                    </button>
-                                    <button aria-label="button" type="button" className="ti-btn ti-btn-sm ti-btn-danger me-[.375rem] mb-1">
-                                        <i className="ri-youtube-line font-semibold"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="p-6 border-b dark:border-defaultborder/10 border-dashed">
-                                <p className="text-[.9375rem] mb-2 me-6 font-semibold">Skills :</p>
-                                <div>
-                                    {Skillsdata.map((idx)=>(
-                                    <Link href="#!" scroll={false} key={Math.random()}>
-                                        <span className="badge bg-light text-[#8c9097] dark:text-white/50 m-1">{idx.text}</span>
-                                    </Link>
-                                    ))}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -150,22 +124,34 @@ const Profile = () => {
                                     <div className="!p-4 border-b dark:border-defaultborder/10 border-dashed md:flex items-center justify-between">
                                         <nav className="-mb-0.5 sm:flex md:space-x-4 rtl:space-x-reverse pb-2" role='tablist'>
                                             <button 
-                                                className={`w-full sm:w-auto flex ${activeTab === 'activity' ? 'active hs-tab-active:font-semibold hs-tab-active:text-white hs-tab-active:bg-primary' : ''} rounded-md py-2 px-4 text-primary text-sm`}
+                                                className={`w-full sm:w-auto flex rounded-md py-2 px-4 text-sm font-medium ${
+                                                    activeTab === 'activity' 
+                                                        ? 'bg-primary text-white' 
+                                                        : 'text-primary hover:text-primary/80'
+                                                }`}
                                                 onClick={() => setActiveTab('activity')}
                                             >
                                                 <i className="ri-gift-line align-middle inline-block me-1"></i>Activity
                                             </button>
                                             <button 
-                                                className={`w-full sm:w-auto flex ${activeTab === 'friends' ? 'active hs-tab-active:font-semibold hs-tab-active:text-white hs-tab-active:bg-primary' : ''} rounded-md py-2 px-4 text-primary text-sm`}
+                                                className={`w-full sm:w-auto flex rounded-md py-2 px-4 text-sm font-medium ${
+                                                    activeTab === 'friends' 
+                                                        ? 'bg-primary text-white' 
+                                                        : 'text-primary hover:text-primary/80'
+                                                }`}
                                                 onClick={() => setActiveTab('friends')}
                                             >
                                                 <i className="ri-information-line me-1 align-middle inline-block"></i>Other Information
                                             </button>
                                             <button 
-                                                className={`w-full sm:w-auto flex ${activeTab === 'gallery' ? 'active hs-tab-active:font-semibold hs-tab-active:text-white hs-tab-active:bg-primary' : ''} rounded-md py-2 px-4 text-primary text-sm`}
+                                                className={`w-full sm:w-auto flex rounded-md py-2 px-4 text-sm font-medium ${
+                                                    activeTab === 'kyc' 
+                                                        ? 'bg-primary text-white' 
+                                                        : 'text-primary hover:text-primary/80'
+                                                }`}
                                                 onClick={() => setActiveTab('kyc')}
                                             >
-                                                <i className="ri-file-text-line me-1 align-middle inline-block"></i>Kyc
+                                                <i className="ri-file-text-line me-1 align-middle inline-block"></i>KYC
                                             </button>
 
                                         </nav>
@@ -181,166 +167,244 @@ const Profile = () => {
                                             {activeTab === 'activity' && (
                                             <div className="tab-pane show active fade !p-0 !border-0" id="activity-tab-pane"
                                                 role="tabpanel" aria-labelledby="activity-tab">
-                                                <ul className="list-none profile-timeline">
-                                                    <li>
-                                                        <div>
-                                                            <span className="avatar avatar-sm bg-primary/10  !text-primary avatar-rounded profile-timeline-avatar">
-                                                                E
-                                                            </span>
-                                                            <p className="mb-2">
-                                                                <b>You</b> Commented on <b>alexander taylor</b> post <Link className="text-secondary" href="#!" scroll={false}><u>#beautiful day</u></Link>.<span className="ltr:float-right rtl:float-left text-[.6875rem] text-[#8c9097] dark:text-white/50">24,Dec 2022 - 14:34</span>
-                                                            </p>
-                                                            <p className="profile-activity-media mb-0 flex w-full mt-2 sm:mt-0">
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/media-17.jpg" alt="" />
-                                                                </Link>
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/media-18.jpg" alt="" />
-                                                                </Link>
-                                                            </p>
-                                                        </div>
-                                                    </li>
-                                                    <li>
-                                                        <div>
-                                                            <span className="avatar avatar-sm avatar-rounded profile-timeline-avatar">
-                                                                <img src="../../assets/images/faces/11.jpg" alt="" />
-                                                            </span>
-                                                            <p className="text-[#8c9097] dark:text-white/50 mb-2">
-                                                                <span className="text-default"><b>Json Smith</b> reacted to the post 👍</span>.<span className="ltr:float-right rtl:float-left text-[.6875rem] text-[#8c9097] dark:text-white/50">18,Dec 2022 - 12:16</span>
-                                                            </p>
-                                                            <p className="text-[#8c9097] dark:text-white/50 mb-0">
-                                                                Lorem ipsum dolor sit amet consectetur adipisicing elit. Repudiandae, repellendus rem rerum excepturi aperiam ipsam temporibus inventore ullam tempora eligendi libero sequi dignissimos cumque, et a sint tenetur consequatur omnis!
-                                                            </p>
-                                                        </div>
-                                                    </li>
-                                                    <li>
-                                                        <div>
-                                                            <span className="avatar avatar-sm avatar-rounded profile-timeline-avatar">
-                                                                <img src="../../assets/images/faces/4.jpg" alt="" />
-                                                            </span>
-                                                            <p className="text-[#8c9097] dark:text-white/50 mb-2">
-                                                                <span className="text-default"><b>Alicia Keys</b> shared a document with <b>you</b></span>.<span className="ltr:float-right rtl:float-left text-[.6875rem] text-[#8c9097] dark:text-white/50">21,Dec 2022 - 15:32</span>
-                                                            </p>
-                                                            <p className="profile-activity-media mb-0 flex w-full mt-2 sm:mt-0 items-center">
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/file-manager/3.png" alt="" />
-                                                                </Link>
-                                                                <span className="text-[.6875rem] text-[#8c9097] dark:text-white/50">432.87KB</span>
-                                                            </p>
-                                                        </div>
-                                                    </li>
-                                                    <li>
-                                                        <div>
-                                                            <span className="avatar avatar-sm bg-success/10 !text-success avatar-rounded profile-timeline-avatar">
-                                                                P
-                                                            </span>
-                                                            <p className="text-[#8c9097] dark:text-white/50 mb-4">
-                                                                <span className="text-default"><b>You</b> shared a post with 4 people <b>Simon,Sasha, Anagha,Hishen</b></span>.<span className="ltr:float-right rtl:float-left text-[.6875rem] text-[#8c9097] dark:text-white/50">28,Dec 2022 - 18:46</span>
-                                                            </p>
-                                                            <p className="profile-activity-media mb-4">
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/media-75.jpg" alt="" />
-                                                                </Link>
-                                                            </p>
-                                                            <div>
-                                                                <div className="avatar-list-stacked">
-                                                                    <span className="avatar avatar-sm avatar-rounded">
-                                                                        <img src="../../assets/images/faces/2.jpg" alt="img" />
-                                                                    </span>
-                                                                    <span className="avatar avatar-sm avatar-rounded">
-                                                                        <img src="../../assets/images/faces/8.jpg" alt="img" />
-                                                                    </span>
-                                                                    <span className="avatar avatar-sm avatar-rounded">
-                                                                        <img src="../../assets/images/faces/2.jpg" alt="img" />
-                                                                    </span>
-                                                                    <span className="avatar avatar-sm avatar-rounded">
-                                                                        <img src="../../assets/images/faces/10.jpg" alt="img" />
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </li>
-                                                    <li>
-                                                        <div>
-                                                            <span className="avatar avatar-sm avatar-rounded profile-timeline-avatar">
-                                                                <img src="../../assets/images/faces/5.jpg" alt="" />
-                                                            </span>
-                                                            <p className="text-[#8c9097] dark:text-white/50 mb-1">
-                                                                <span className="text-default"><b>Melissa Blue</b> liked your post <b>travel excites</b></span>.<span className="ltr:float-right rtl:float-left text-[.6875rem] text-[#8c9097] dark:text-white/50">11,Dec 2022 - 11:18</span>
-                                                            </p>
-                                                            <p className="text-[#8c9097] dark:text-white/50">you are already feeling the tense atmosphere of the video playing in the background</p>
-                                                            <p className="profile-activity-media sm:flex mb-0">
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/media-59.jpg" className="m-1" alt="" />
-                                                                </Link>
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/media-60.jpg" className="m-1" alt="" />
-                                                                </Link>
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/media-61.jpg" className="m-1" alt="" />
-                                                                </Link>
-                                                            </p>
-                                                        </div>
-                                                    </li>
-                                                    <li>
-                                                        <div>
-                                                            <span className="avatar avatar-sm avatar-rounded profile-timeline-avatar">
-                                                                <img src="../../assets/images/media/media-39.jpg" alt="" />
-                                                            </span>
-                                                            <p className="mb-1">
-                                                                <b>You</b> Commented on <b>Peter Engola</b> post <Link className="text-secondary" href="#!" scroll={false}><u>#Mother Nature</u></Link>.<span className="ltr:float-right rtl:float-left text-[.6875rem] text-[#8c9097] dark:text-white/50">24,Dec 2022 - 14:34</span>
-                                                            </p>
-                                                            <p className="text-[#8c9097] dark:text-white/50">Technology id developing rapidly kepp uo your work 👌</p>
-                                                            <p className="profile-activity-media mb-0 flex w-full mt-2 sm:mt-0">
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/media-26.jpg" alt="" />
-                                                                </Link>
-                                                                <Link aria-label="anchor" href="#!" scroll={false}>
-                                                                    <img src="../../assets/images/media/media-29.jpg" alt="" />
-                                                                </Link>
-                                                            </p>
-                                                        </div>
-                                                    </li>
-                                                </ul>
+                                                <div className="text-center py-8">
+                                                    <i className="ri-history-line text-6xl text-gray-400 mb-4"></i>
+                                                    <h4 className="text-gray-600 mb-2">No Leads History</h4>
+                                                    <p className="text-gray-500">This user has no leads activity to display yet.</p>
+                                                </div>
                                             </div>
                                             )}
                                             {activeTab === 'friends' && (
                                                 <div className="tab-pane show active fade !p-0 !border-0" role="tabpanel">
-                                                <div className="grid grid-cols-12 sm:gap-x-6">
-                                                    {Friendsdata.map((idx) =>(
-                                                    <div className="xxl:col-span-4 xl:col-span-4 lg:col-span-6 md:col-span-6 col-span-12" key={Math.random()}>
-                                                        <div className="box !shadow-none border dark:border-defaultborder/10">
-                                                            <div className="box-body p-6">
-                                                                <div className="text-center">
-                                                                    <span className="avatar avatar-xl avatar-rounded">
-                                                                        <img src={idx.src} alt="" />
-                                                                    </span>
-                                                                    <div className="mt-2">
-                                                                        <p className="mb-0 font-semibold">{idx.name}</p>
-                                                                        <p className="text-[0.75rem] opacity-[0.7] mb-1 text-[#8c9097] dark:text-white/50">{idx.mail}</p>
-                                                                        <span className={`badge bg-${idx.color}/10 rounded-full text-${idx.color}`}>{idx.badge}</span>
+                                                    <div className="grid grid-cols-12 gap-4">
+                                                        <div className="col-span-12 md:col-span-6">
+                                                            <div className="box !shadow-none border dark:border-defaultborder/10">
+                                                                <div className="box-header">
+                                                                    <h6 className="box-title">Personal Information</h6>
+                                                                </div>
+                                                                <div className="box-body">
+                                                                    <div className="space-y-3">
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Full Name:</span>
+                                                                            <span className="font-semibold">{userData?.name || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Email:</span>
+                                                                            <span className="font-semibold">{userData?.email || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Mobile:</span>
+                                                                            <span className="font-semibold">{userData?.mobileNumber || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Role:</span>
+                                                                            <span className="font-semibold capitalize">{userData?.role || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Status:</span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${userData?.status === 'active' ? 'bg-primary' : 'bg-primary'}`}>
+                                                                                    <i className="ri-shield-check-line text-xs text-white"></i>
+                                                                                </div>
+                                                                                <span className={`badge ${userData?.status === 'active' ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                    {userData?.status || '--'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">KYC Status:</span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                    <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${userData?.kycStatus === 'verified' ? 'bg-primary' : 'bg-primary'}`}>
+                                                                                    <i className="ri-verified-badge-line text-xs text-white"></i>
+                                                                                </div>
+                                                                                <span className={`badge ${userData?.kycStatus === 'verified' ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                    {userData?.kycStatus || '--'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="box-footer text-center">
-                                                                <div className="btn-list">
-                                                                    <button type="button" className="ti-btn btn-sm !py-1 !px-2 !text-[0.75rem] me-1 ti-btn-light">Block</button>
-                                                                    <button type="button" className="ti-btn btn-sm !py-1 !px-2 !text-[0.75rem] text-white bg-primary">Unfollow</button>
+                                                        </div>
+                                                        <div className="col-span-12 md:col-span-6">
+                                                            <div className="box !shadow-none border dark:border-defaultborder/10">
+                                                                <div className="box-header">
+                                                                    <h6 className="box-title">Address Information</h6>
+                                                                </div>
+                                                                <div className="box-body">
+                                                                    <div className="space-y-3">
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Street:</span>
+                                                                            <span className="font-semibold">{userData?.address?.street || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">City:</span>
+                                                                            <span className="font-semibold">{userData?.address?.city || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">State:</span>
+                                                                            <span className="font-semibold">{userData?.address?.state || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Country:</span>
+                                                                            <span className="font-semibold">{userData?.address?.country || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Pincode:</span>
+                                                                            <span className="font-semibold">{userData?.address?.pincode || '--'}</span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    ))}
+                                                        <div className="col-span-12">
+                                                            <div className="box !shadow-none border dark:border-defaultborder/10">
+                                                                <div className="box-header">
+                                                                    <h6 className="box-title">Verification Status</h6>
+                                                                </div>
+                                                                <div className="box-body">
+                                                                    <div className="grid grid-cols-12 gap-4">
+                                                                        <div className="col-span-6 md:col-span-3">
+                                                                            <div className="text-center">
+                                                                                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 ${userData?.isEmailVerified ? 'bg-primary' : 'bg-primary'}`}>
+                                                                                    <i className="ri-mail-line text-xl text-white"></i>
+                                                                                </div>
+                                                                                <p className="text-sm mt-1">Email</p>
+                                                                                <span className={`badge ${userData?.isEmailVerified ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                    {userData?.isEmailVerified ? 'Verified' : 'Pending'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="col-span-6 md:col-span-3">
+                                                                            <div className="text-center">
+                                                                                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 ${userData?.isMobileVerified ? 'bg-blue-500' : 'bg-blue-500'}`}>
+                                                                                    <i className="ri-phone-line text-xl text-white"></i>
+                                                                                </div>
+                                                                                <p className="text-sm mt-1">Mobile</p>
+                                                                                <span className={`badge ${userData?.isMobileVerified ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                    {userData?.isMobileVerified ? 'Verified' : 'Pending'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="col-span-6 md:col-span-3">
+                                                                            <div className="text-center">
+                                                                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 bg-primary">
+                                                                                    <i className="ri-currency-line text-xl text-white"></i>
+                                                                                </div>
+                                                                                <p className="text-sm mt-1">Total Sales</p>
+                                                                                <span className="badge bg-primary text-white">{userData?.totalSales || '0'}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="col-span-6 md:col-span-3">
+                                                                            <div className="text-center">
+                                                                                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 ${userData?.onboardingStatus === 'completed' ? 'bg-blue-500' : 'bg-blue-500'}`}>
+                                                                                    <i className="ri-user-settings-line text-xl text-white"></i>
+                                                                                </div>
+                                                                                <p className="text-sm mt-1">Onboarding</p>
+                                                                                <span className={`badge ${userData?.onboardingStatus === 'completed' ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                    {userData?.onboardingStatus || 'Pending'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
                                             {activeTab === 'kyc' && (
                                                 <div className="tab-pane show active fade !p-0 !border-0" role="tabpanel">
-                                                    <div className="grid grid-cols-12 sm:gap-x-6 gap-y-6">
-                                                        <div className="xxl:col-span-4 xl:col-span-4 lg:col-span-6 md:col-span-6 col-span-12">
+                                                    <div className="grid grid-cols-12 gap-4">
+                                                        <div className="col-span-12 md:col-span-6">
                                                             <div className="box !shadow-none border dark:border-defaultborder/10">
-                                                                <div className="box-body p-6">
-                                                                    <h1>Kyc</h1>
+                                                                <div className="box-header">
+                                                                    <h6 className="box-title">Aadhaar Details</h6>
+                                                                </div>
+                                                                <div className="box-body">
+                                                                    <div className="space-y-3">
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Aadhaar Number:</span>
+                                                                            <span className="font-semibold">{userData?.kycDetails?.aadhaarNumber || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Verification Status:</span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${userData?.kycDetails?.aadhaarVerified ? 'bg-primary' : 'bg-primary'}`}>
+                                                                                    <i className="ri-id-card-line text-xs text-white"></i>
+                                                                                </div>
+                                                                                <span className={`badge ${userData?.kycDetails?.aadhaarVerified ? 'bg-blue-500 text-white' : 'bg-blue-500 text-white'}`}>
+                                                                                    {userData?.kycDetails?.aadhaarVerified ? 'Verified' : 'Pending'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-span-12 md:col-span-6">
+                                                            <div className="box !shadow-none border dark:border-defaultborder/10">
+                                                                <div className="box-header">
+                                                                    <h6 className="box-title">PAN Details</h6>
+                                                                </div>
+                                                                <div className="box-body">
+                                                                    <div className="space-y-3">
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">PAN Number:</span>
+                                                                            <span className="font-semibold">{userData?.kycDetails?.panNumber || '--'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-[#8c9097] dark:text-white/50">Verification Status:</span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${userData?.kycDetails?.panVerified ? 'bg-primary' : 'bg-primary'}`}>
+                                                                                    <i className="ri-bank-card-line text-xs text-white"></i>
+                                                                                </div>
+                                                                                <span className={`badge ${userData?.kycDetails?.panVerified ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                    {userData?.kycDetails?.panVerified ? 'Verified' : 'Pending'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-span-12">
+                                                            <div className="box !shadow-none border dark:border-defaultborder/10">
+                                                                <div className="box-header">
+                                                                    <h6 className="box-title">Uploaded Documents</h6>
+                                                                </div>
+                                                                <div className="box-body">
+                                                                    {userData?.kycDetails?.documents && userData.kycDetails.documents.length > 0 ? (
+                                                                        <div className="grid grid-cols-12 gap-4">
+                                                                            {userData.kycDetails.documents.map((doc: any, index: number) => (
+                                                                                <div key={index} className="col-span-12 md:col-span-6">
+                                                                                    <div className="border rounded-lg p-4">
+                                                                                        <div className="flex items-center justify-between mb-3">
+                                                                                            <h6 className="text-sm font-semibold capitalize">{doc.type} Document</h6>
+                                                                                            <span className={`badge ${doc.verified ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                                {doc.verified ? 'Verified' : 'Pending'}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="text-center">
+                                                                                            <img 
+                                                                                                src={doc.url} 
+                                                                                                alt={`${doc.type} document`}
+                                                                                                className="max-w-full h-32 object-cover rounded border mx-auto"
+                                                                                            />
+                                                                                            <p className="text-xs text-gray-500 mt-2">
+                                                                                                Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
+                                                                                            </p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-center py-8">
+                                                                            <i className="ri-file-list-3-line text-4xl text-gray-400 mb-4"></i>
+                                                                            <p className="text-gray-500">No documents uploaded yet</p>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
