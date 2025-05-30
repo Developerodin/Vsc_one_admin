@@ -7,6 +7,7 @@ import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import axios from "axios";
 import { Base_url } from "@/app/api/config/BaseUrl";
 import Select from "react-select";
+import Link from 'next/link';
 
 interface FormData {
     product: string; // This will store the product ID
@@ -331,6 +332,9 @@ const EditLeads = () => {
                 <div className="col-span-12">
                     <div className="flex items-center justify-between mb-4">
                         <h5 className="text-lg font-semibold">Custom Fields for {categoryName}</h5>
+                        <Link href="/leadsFields/leadsFields" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                            <i className="ri-arrow-left-line font-semibold align-middle me-1"></i> Back to Leads Fields
+                        </Link>
                         <button
                             type="button"
                             onClick={addCustomField}

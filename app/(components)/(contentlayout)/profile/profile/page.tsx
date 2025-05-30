@@ -16,12 +16,21 @@ const Profile = () => {
     const [userData, setUserData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('activity');
+    const [leads, setLeads] = useState<any[]>([]);
+    const [leadsLoading, setLeadsLoading] = useState(false);
+    const [totalLeads, setTotalLeads] = useState(0);
 
     useEffect(() => {
         if (userId) {
             fetchUserDetails();
         }
     }, [userId]);
+
+    useEffect(() => {
+        if (activeTab === 'activity' && userId) {
+            fetchUserLeads();
+        }
+    }, [activeTab, userId]);
 
     const fetchUserDetails = async () => {
         try {
@@ -40,6 +49,24 @@ const Profile = () => {
         }
     };
 
+    const fetchUserLeads = async () => {
+        try {
+            setLeadsLoading(true);
+            const token = localStorage.getItem("token");
+            const response = await axios.get(`${Base_url}leads/user/${userId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            setLeads(response.data.results || []);
+            setTotalLeads(response.data.results?.length || 0);
+        } catch (error) {
+            console.error("Error fetching leads:", error);
+        } finally {
+            setLeadsLoading(false);
+        }
+    };
+
     if (loading) {
         return <div>Loading...</div>;
     }
@@ -48,7 +75,15 @@ const Profile = () => {
         <Fragment>
             <Seo title={"Profile"} />
             <Pageheader currentpage="Profile" activepage="Pages" mainpage="Profile" />
+
             <div className="grid grid-cols-12 gap-x-6">
+                <div className="col-span-12 mb-4">
+                    <div className="flex justify-end">
+                        <Link href="/users/users" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                            <i className="ri-arrow-left-line font-semibold align-middle me-1"></i> Back to Users
+                        </Link>
+                    </div>
+                </div>
                 <div className="xxl:col-span-4 xl:col-span-12 col-span-12">
                     <div className="box overflow-hidden">
                         <div className="box-body !p-0">
@@ -167,11 +202,76 @@ const Profile = () => {
                                             {activeTab === 'activity' && (
                                             <div className="tab-pane show active fade !p-0 !border-0" id="activity-tab-pane"
                                                 role="tabpanel" aria-labelledby="activity-tab">
-                                                <div className="text-center py-8">
-                                                    <i className="ri-history-line text-6xl text-gray-400 mb-4"></i>
-                                                    <h4 className="text-gray-600 mb-2">No Leads History</h4>
-                                                    <p className="text-gray-500">This user has no leads activity to display yet.</p>
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <h6 className="text-lg font-semibold">Lead Details</h6>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-sm text-gray-500">Total Leads: {totalLeads}</span>
+                                                    </div>
                                                 </div>
+                                                {leadsLoading ? (
+                                                    <div className="text-center py-8">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                                                        <p className="mt-2 text-gray-500">Loading leads...</p>
+                                                    </div>
+                                                ) : leads.length > 0 ? (
+                                                    <div className="space-y-4">
+                                                        {leads.map((lead) => (
+                                                            <div key={lead.id} className="border rounded-lg p-4">
+                                                                <div className="flex justify-between items-start mb-3">
+                                                                    <div>
+                                                                        <h6 className="font-semibold text-lg">{lead.fieldsData['Full Name']}</h6>
+                                                                        <p className="text-sm text-gray-500">{lead.fieldsData['Email']}</p>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className={`badge ${
+                                                                            lead.status === 'new' ? 'bg-primary' :
+                                                                            lead.status === 'interested' ? 'bg-success' :
+                                                                            lead.status === 'not_interested' ? 'bg-danger' :
+                                                                            'bg-warning'
+                                                                        } text-white`}>
+                                                                            {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                                                                        </span>
+                                                                        <Link 
+                                                                            href={`/leads/timeline?id=${lead.id}`}
+                                                                            className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
+                                                                        >
+                                                                            <i className="ri-timeline-line me-1"></i>
+                                                                            View Timeline
+                                                                        </Link>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                                                    <div>
+                                                                        <p className="text-sm text-gray-500">Mobile</p>
+                                                                        <p className="font-medium">{lead.fieldsData['Mobile Number']}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-sm text-gray-500">DOB</p>
+                                                                        <p className="font-medium">{lead.fieldsData['DOB']}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-sm text-gray-500">Policy Term</p>
+                                                                        <p className="font-medium">{lead.fieldsData['Policy Term']}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-sm text-gray-500">Occupation</p>
+                                                                        <p className="font-medium">{lead.fieldsData['Occupation']}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="mt-3">
+                                                                    <p className="text-sm text-gray-500">Address</p>
+                                                                    <p className="font-medium">{lead.fieldsData['Address']}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-8">
+                                                        <i className="ri-history-line text-6xl text-gray-400 mb-4"></i>
+                                                        <h4 className="text-gray-600 mb-2">No Leads History</h4>
+                                                        <p className="text-gray-500">This user has no leads activity to display yet.</p>
+                                                    </div>
+                                                )}
                                             </div>
                                             )}
                                             {activeTab === 'friends' && (
@@ -277,7 +377,7 @@ const Profile = () => {
                                                                         </div>
                                                                         <div className="col-span-6 md:col-span-3">
                                                                             <div className="text-center">
-                                                                                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 ${userData?.isMobileVerified ? 'bg-blue-500' : 'bg-blue-500'}`}>
+                                                                                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 ${userData?.isMobileVerified ? 'bg-primary' : 'bg-primary'}`}>
                                                                                     <i className="ri-phone-line text-xl text-white"></i>
                                                                                 </div>
                                                                                 <p className="text-sm mt-1">Mobile</p>
@@ -297,7 +397,7 @@ const Profile = () => {
                                                                         </div>
                                                                         <div className="col-span-6 md:col-span-3">
                                                                             <div className="text-center">
-                                                                                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 ${userData?.onboardingStatus === 'completed' ? 'bg-blue-500' : 'bg-blue-500'}`}>
+                                                                                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 ${userData?.onboardingStatus === 'completed' ? 'bg-primary' : 'bg-primary'}`}>
                                                                                     <i className="ri-user-settings-line text-xl text-white"></i>
                                                                                 </div>
                                                                                 <p className="text-sm mt-1">Onboarding</p>

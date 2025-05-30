@@ -169,10 +169,14 @@ const Subcategory = () => {
                     <div className="box">
                         <div className="box-header">
                             <h5 className="box-title">Subcategory List</h5>
-                            <div className="flex">
+                            <div className="flex gap-2">
+                                
                                 <button type="button" className="hs-dropdown-toggle ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]" data-hs-overlay="#create-subcategory">
                                     <i className="ri-add-line font-semibold align-middle"></i> Create Subcategory
                                 </button>
+                                <Link href="/category/category" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                                    <i className="ri-arrow-left-line font-semibold align-middle me-1"></i> Back to Category
+                                </Link>
                                 <div id="create-subcategory" className="hs-overlay hidden ti-modal">
                                     <div className="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out min-h-[calc(100%-3.5rem)] flex items-center">
                                         <div className="ti-modal-content">

@@ -6,7 +6,7 @@ import Seo from "@/shared/layout-components/seo/seo";
 import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import axios from 'axios';
 import { Base_url } from '@/app/api/config/BaseUrl';
-
+import Link from 'next/link';
 interface FormData {
   name: string;
   description: string;
@@ -112,6 +112,9 @@ const CreateRole = () => {
           <div className="box">
             <div className="box-header">
               <h5 className="box-title">Create New Role</h5>
+              <Link href="/roles/roles" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                <i className="ri-arrow-left-line font-semibold align-middle me-1"></i> Back to Roles
+              </Link>
             </div>
             <div className="box-body">
               <div className="flex border-b border-gray-200 mb-4">

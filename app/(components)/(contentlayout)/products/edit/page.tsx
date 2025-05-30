@@ -9,7 +9,7 @@ import { Base_url } from "@/app/api/config/BaseUrl";
 import Select from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-
+import Link from 'next/link';
 interface FormData {
     name: string;
     type: 'insurance' | 'banking';
@@ -289,6 +289,9 @@ const EditProduct = () => {
                     <div className="box">
                         <div className="box-header">
                             <h5 className="box-title">Edit Product</h5>
+                            <Link href="/products/products" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                                <i className="ri-arrow-left-line font-semibold align-middle me-1"></i> Back to Products
+                            </Link>
                         </div>
                         <div className="box-body">
                             <div className="flex space-x-2 border-b border-gray-200">

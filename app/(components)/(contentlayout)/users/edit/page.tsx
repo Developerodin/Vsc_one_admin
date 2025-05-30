@@ -7,6 +7,7 @@ import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import axios from "axios";
 import { Base_url } from "@/app/api/config/BaseUrl";
 import Select from "react-select";
+import Link from 'next/link';
 
 interface FormData {
   // General Information
@@ -174,6 +175,23 @@ const EditUser = () => {
       });
       
       const userData = response.data;
+
+      // Handle profile picture URL
+      if (userData.profilePicture) {
+        userData.profilePicture = `${Base_url}uploads/${userData.profilePicture}`;
+      }
+
+      // Handle KYC documents
+      if (userData.kycDetails?.documents) {
+        userData.kycDetails.documents = userData.kycDetails.documents.map((doc: any) => ({
+          ...doc,
+          url: `${Base_url}uploads/${doc.url}`,
+          uploadedAt: new Date(doc.uploadedAt),
+          verifiedAt: doc.verifiedAt ? new Date(doc.verifiedAt) : null
+        }));
+      }
+
+      // Format dates
       if (userData.lastLogin) {
         userData.lastLogin = new Date(userData.lastLogin);
       }
@@ -237,6 +255,9 @@ const EditUser = () => {
           <div className="box">
             <div className="box-header">
               <h5 className="box-title">Edit User</h5>
+              <Link href="/users/users" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                <i className="ri-arrow-left-line font-semibold align-middle me-1"></i> Back to Users
+              </Link>
             </div>
             <div className="box-body">
               <div className="flex space-x-2 border-b border-gray-200">
@@ -333,11 +354,28 @@ const EditUser = () => {
                     </div>
                     <div className="col-span-6">
                       <label className="form-label">Profile Picture</label>
-                      <input
-                        type="file"
-                        className="form-control"
-                        onChange={(e) => setFormData({...formData, profilePicture: e.target.files?.[0] || null})}
-                      />
+                      <div className="flex items-center gap-4">
+                        {formData.profilePicture && (
+                          <div className="relative">
+                            <img 
+                              src={typeof formData.profilePicture === 'string' ? formData.profilePicture : URL.createObjectURL(formData.profilePicture)} 
+                              alt="Profile" 
+                              className="h-24 w-24 object-cover rounded-full border"
+                            />
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          className="form-control"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setFormData({...formData, profilePicture: file});
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -474,18 +512,49 @@ const EditUser = () => {
                               />
                             </div>
                             <div className="col-span-6">
-                              <input
-                                type="file"
-                                className="form-control"
-                                onChange={(e) => {
-                                  const newDocs = [...formData.kycDetails.documents];
-                                  newDocs[index] = {...doc, url: e.target.files?.[0]?.name || ''};
-                                  setFormData({
-                                    ...formData,
-                                    kycDetails: {...formData.kycDetails, documents: newDocs}
-                                  });
-                                }}
-                              />
+                              <div className="flex items-center gap-4">
+                                {doc.url && (
+                                  <div className="relative">
+                                    <img 
+                                      src={doc.url} 
+                                      alt={`${doc.type} document`}
+                                      className="h-24 w-24 object-cover rounded border"
+                                    />
+                                    {doc.verified && (
+                                      <div className="absolute -top-2 -right-2">
+                                        <span className="badge bg-primary text-white">Verified</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="flex-1">
+                                  <input
+                                    type="file"
+                                    className="form-control"
+                                    accept="image/*,.pdf"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        const newDocs = [...formData.kycDetails.documents];
+                                        newDocs[index] = {
+                                          ...doc,
+                                          url: URL.createObjectURL(file),
+                                          uploadedAt: new Date()
+                                        };
+                                        setFormData({
+                                          ...formData,
+                                          kycDetails: {...formData.kycDetails, documents: newDocs}
+                                        });
+                                      }
+                                    }}
+                                  />
+                                  {doc.verifiedAt && (
+                                    <div className="mt-1 text-xs text-gray-500">
+                                      Verified on {new Date(doc.verifiedAt).toLocaleDateString()}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                             <div className="col-span-2">
                               <button

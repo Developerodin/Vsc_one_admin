@@ -37,6 +37,11 @@ interface DataTableProps {
     headers: TableHeader[];
     data: TableRow[];
     className?: string;
+    customFilters?: {
+        label: string;
+        value: string;
+    }[];
+    onFilterChange?: (filterType: string, value: string) => void;
 }
 
 type CustomColumnDef<TData, TValue> = ColumnDef<TData, TValue> & {
@@ -58,10 +63,11 @@ const GlobalFilter = ({ filter, setFilter }: { filter: string; setFilter: (value
     );
 };
 
-const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '' }) => {
+const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '', customFilters, onFilterChange }) => {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
     const [globalFilter, setGlobalFilter] = React.useState('')
+    const [customFilterValues, setCustomFilterValues] = React.useState<{ [key: string]: string }>({})
 
     const columnHelper = createColumnHelper<TableRow>()
 
@@ -95,22 +101,48 @@ const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '' }) 
         getPaginationRowModel: getPaginationRowModel(),
     });
 
+    const handleCustomFilterChange = (filterType: string, value: string) => {
+        setCustomFilterValues(prev => ({
+            ...prev,
+            [filterType]: value
+        }));
+        onFilterChange?.(filterType, value);
+    };
+
     return (
         <>
-            <div className="mb-4 flex items-center">
-                <select
-                    className="selectpage border"
-                    value={table.getState().pagination.pageSize}
-                    onChange={e => {
-                        table.setPageSize(Number(e.target.value))
-                    }}
-                >
-                    {[10, 25, 50].map((pageSize) => (
-                        <option key={pageSize} value={pageSize}>
-                            Show {pageSize}
-                        </option>
-                    ))}
-                </select>
+            <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <select
+                        className="selectpage border"
+                        value={table.getState().pagination.pageSize}
+                        onChange={e => {
+                            table.setPageSize(Number(e.target.value))
+                        }}
+                    >
+                        {[10, 25, 50].map((pageSize) => (
+                            <option key={pageSize} value={pageSize}>
+                                Show {pageSize}
+                            </option>
+                        ))}
+                    </select>
+                    {customFilters && customFilters.length > 0 && (
+                        <div className="flex items-center gap-3">
+                            {customFilters.map((filter) => (
+                                <div key={filter.value} className="flex items-center gap-1">
+                                    <label className="text-xs font-medium text-gray-600 whitespace-nowrap">{filter.label}:</label>
+                                    <input
+                                        type="text"
+                                        className="form-control !py-1 !px-2 !text-xs !w-48"
+                                        placeholder={`Filter ${filter.label}`}
+                                        value={customFilterValues[filter.value] || ''}
+                                        onChange={(e) => handleCustomFilterChange(filter.value, e.target.value)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 <GlobalFilter filter={globalFilter} setFilter={setGlobalFilter} />
             </div>
             <div className="table-responsive">

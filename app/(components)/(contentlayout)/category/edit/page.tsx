@@ -7,7 +7,7 @@ import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import axios from "axios";
 import { Base_url } from "@/app/api/config/BaseUrl";
 import Select from "react-select";
-
+import Link from 'next/link';
 interface FormData {
     name: string;
     description: string;
@@ -150,6 +150,9 @@ const EditCategory = () => {
                     <div className="box">
                         <div className="box-header">
                             <h5 className="box-title">Edit Category</h5>
+                            <Link href="/category/category" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                                <i className="ri-arrow-left-line font-semibold align-middle me-1"></i> Back to Category
+                            </Link>
                         </div>
                         <div className="box-body">
                             <div className="flex space-x-2 border-b border-gray-200">

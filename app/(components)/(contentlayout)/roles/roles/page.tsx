@@ -108,11 +108,6 @@ const Roles = () => {
           {
             icon: "ri-eye-line",
             className: "ti-btn-primary",
-            onClick: () => viewRole(role.id),
-          },
-          {
-            icon: "ri-edit-line",
-            className: "ti-btn-info",
             onClick: () => editRole(role.id),
           },
           {

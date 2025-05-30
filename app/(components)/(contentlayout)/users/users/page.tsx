@@ -31,15 +31,40 @@ interface User {
 const Users = () => {
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    name: '',
+    email: '',
+    city: ''
+  });
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const handleFilterChange = (filterType: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  useEffect(() => {
+    const filtered = users.filter(user => {
+      const nameMatch = user.name.props.children[0].props.children.toLowerCase().includes(filters.name.toLowerCase());
+      const emailMatch = user.contact.props.children[1].props.children.toLowerCase().includes(filters.email.toLowerCase());
+      const cityMatch = user.address.toLowerCase().includes(filters.city.toLowerCase());
+      
+      return nameMatch && emailMatch && cityMatch;
+    });
+    
+    setFilteredUsers(filtered);
+  }, [filters, users]);
 
   const fetchUsers = async () => {
     try {
@@ -51,7 +76,6 @@ const Users = () => {
         },
       });
 
-      // Format the data according to table headers
       const formattedData = response.data.results.map((user: any) => ({
         profile: (
           <div className="flex items-center">
@@ -84,6 +108,11 @@ const Users = () => {
         ),
         totalCommission: user.totalCommission || "--",
         address: user.address?.country || "--",
+        createdDate: new Date(user.createdAt).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        }),
         userId: user.id,
         actions: [
           {
@@ -105,6 +134,7 @@ const Users = () => {
       }));
 
       setUsers(formattedData);
+      setFilteredUsers(formattedData);
     } catch (error) {
       setError("Failed to fetch users");
       console.error("Error fetching users:", error);
@@ -176,12 +206,19 @@ const Users = () => {
     XLSX.writeFile(wb, 'users.xlsx');
   };
 
+  const filterOptions = [
+    { label: 'Name', value: 'name' },
+    { label: 'Email', value: 'email' },
+    { label: 'City', value: 'city' }
+  ];
+
   const headers = [
     { key: "profile", label: "Profile", sortable: false },
     { key: "name", label: "Name", sortable: true },
     { key: "contact", label: "Contact", sortable: false },
     { key: "totalCommission", label: "Total Commission", sortable: true },
     { key: "address", label: "Address", sortable: false },
+    { key: "createdDate", label: "Created Date", sortable: true },
     { key: "actions", label: "Actions", sortable: false },
   ];
 
@@ -217,7 +254,12 @@ const Users = () => {
               ) : error ? (
                 <div className="text-center text-danger">{error}</div>
               ) : (
-                <DataTable headers={headers} data={users} />
+                <DataTable 
+                  headers={headers} 
+                  data={filteredUsers} 
+                  customFilters={filterOptions}
+                  onFilterChange={handleFilterChange}
+                />
               )}
             </div>
           </div>
