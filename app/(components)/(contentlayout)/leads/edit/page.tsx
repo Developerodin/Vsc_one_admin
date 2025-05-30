@@ -56,7 +56,7 @@ const EditLead = () => {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}users`, {
+            const response = await axios.get(`${Base_url}users?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

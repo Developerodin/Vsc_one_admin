@@ -59,11 +59,6 @@ const LeadsFields = () => {
                         {
                             icon: 'ri-eye-line',
                             className: 'ti-btn-primary',
-                            href: '#'
-                        },
-                        {
-                            icon: 'ri-edit-line',
-                            className: 'ti-btn-info',
                             href: `/leadsFields/edit?id=${leadField.id}`
                         },
                         {
