@@ -40,7 +40,7 @@ const LeadsFields = () => {
             const token = localStorage.getItem('token');
             
             // Fetch leads fields data from the new endpoint
-            const response = await axios.get(`${Base_url}leadsfields`, {
+            const response = await axios.get(`${Base_url}leadsfields?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
