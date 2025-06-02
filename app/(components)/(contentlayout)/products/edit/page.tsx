@@ -129,7 +129,7 @@ const EditProduct = () => {
     const fetchCategories = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}categories`, {
+            const response = await axios.get(`${Base_url}categories?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -174,7 +174,10 @@ const EditProduct = () => {
 
     const TypeOptions = [
         { value: 'insurance', label: 'Insurance' },
-        { value: 'banking', label: 'Banking' }
+        { value: 'banking', label: 'Banking' },
+        { value: 'project funding', label: 'Project Funding' },
+        { value: 'it sector', label: 'IT Sector' },
+        { value: 'capital market', label: 'Capital Market' }
     ];
 
     const StatusOptions = [
@@ -253,10 +256,16 @@ const EditProduct = () => {
             setLoading(true);
             const token = localStorage.getItem('token');
             
-            // Create a copy of formData and remove the id if it exists
+            // Create a copy of formData and remove unwanted fields
             const requestData = { ...formData };
             if ('id' in requestData) {
                 delete requestData.id;
+            }
+            if ('createdAt' in requestData) {
+                delete requestData.createdAt;
+            }
+            if ('updatedAt' in requestData) {
+                delete requestData.updatedAt;
             }
             
             await axios.patch(`${Base_url}products/${productId}`, requestData, {

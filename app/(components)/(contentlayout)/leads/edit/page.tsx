@@ -176,7 +176,7 @@ const EditLead = () => {
                     <div className="box">
                         <div className="box-header">
                             <div className="flex items-center justify-between w-full">
-                                <h5 className="box-title">Edit Lead</h5>
+                            <h5 className="box-title">Edit Lead</h5>
                                 <div className="flex items-center gap-3">
                                     <span className={`badge ${getStatusBadgeColor(selectedStatus)} text-white px-3 py-1`}>
                                         {selectedStatus || '--'}
@@ -212,7 +212,7 @@ const EditLead = () => {
                                         </button>
                                     ))}
                                 </nav>
-                            </div>
+                                </div>
 
                             <form onSubmit={handleSubmit}>
                                 {/* Lead Overview Tab */}
@@ -265,14 +265,14 @@ const EditLead = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                        </div>
+                                    )}
 
                                 {/* Customer Information Tab */}
                                 {activeTab === 'customer' && (
                                     <div className="space-y-6">
                                         {leadData.fieldsData && Object.keys(leadData.fieldsData).length > 0 ? (
-                                            <div className="grid grid-cols-12 gap-4">
+                                        <div className="grid grid-cols-12 gap-4">
                                                 {Object.entries(leadData.fieldsData).map(([key, value]: [string, any]) => (
                                                     <div key={key} className="col-span-12 md:col-span-6">
                                                         <div className="space-y-1">
@@ -326,7 +326,7 @@ const EditLead = () => {
                                                                 </div>
                                                             </div>
                                                             {productItem.product?.description && (
-                                                                <div className="col-span-12">
+                                            <div className="col-span-12">
                                                                     <div>
                                                                         <span className="text-sm text-gray-600">Description:</span>
                                                                         <p className="text-sm font-medium mt-1 p-2 bg-gray-50 rounded border">{productItem.product.description}</p>
@@ -334,7 +334,7 @@ const EditLead = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    </div>
+                                            </div>
                                                 ))}
                                             </div>
                                         ) : (
@@ -343,8 +343,8 @@ const EditLead = () => {
                                                 <p className="text-gray-500">No product information available</p>
                                             </div>
                                         )}
-                                    </div>
-                                )}
+                                        </div>
+                                    )}
 
                                 {/* Category Information Tab */}
                                 {activeTab === 'category' && (
@@ -377,7 +377,7 @@ const EditLead = () => {
                                                             <div>
                                                                 <label className="text-sm font-medium text-gray-600">Description</label>
                                                                 <p className="text-sm font-medium p-2 bg-gray-50 rounded border mt-1">{leadData.category.description}</p>
-                                                            </div>
+                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -412,8 +412,8 @@ const EditLead = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                        </div>
+                                    )}
 
                                 {/* Action Buttons - Show on all tabs */}
                                 <div className="flex justify-end gap-2 pt-6 border-t">

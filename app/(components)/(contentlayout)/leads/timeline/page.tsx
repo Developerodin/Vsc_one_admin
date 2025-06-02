@@ -141,16 +141,16 @@ const LeadTimeline = () => {
                                     <label className="text-sm font-medium text-gray-600">Category</label>
                                     <p className="text-sm font-semibold">{timelineData.category?.name || '--'}</p>
                                 </div>
-                            </div>
+                                        </div>
                             <div className="col-span-12 md:col-span-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-600">Completion</label>
                                     <p className="text-sm font-semibold">{timelineData.completionPercentage || 0}%</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Timeline */}
                 <div className="box">
@@ -162,78 +162,80 @@ const LeadTimeline = () => {
                             {/* Phases Timeline */}
                             {timelineData.phases?.map((phase: any, index: number) => (
                                 <li key={index}>
-                                    <div className="timeline-time text-end">
+                                <div className="timeline-time text-end">
                                         <span className="date">{phase.name.toUpperCase()}</span>
                                         <span className="time inline-block">{phase.estimatedDuration}</span>
-                                    </div>
-                                    <div className="timeline-icon">
+                                </div>
+                                <div className="timeline-icon">
                                         <a aria-label="anchor" href="#!">
                                             <i className={getPhaseIcon(phase)}></i>
                                         </a>
-                                    </div>
-                                    <div className="timeline-body">
-                                        <div className="flex items-start timeline-main-content flex-wrap mt-0">
+                                </div>
+                                <div className="timeline-body">
+                                    <div className="flex items-start timeline-main-content flex-wrap mt-0">
                                             <div className="avatar avatar-md me-3 avatar-rounded md:mt-0 mt-6">
                                                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                                                     <i className={getPhaseIcon(phase)} />
                                                 </div>
-                                            </div>
-                                            <div className="flex-grow">
-                                                <div className="flex items-center">
-                                                    <div className="sm:mt-0 mt-2">
+                                        </div>
+                                        <div className="flex-grow">
+                                            <div className="flex items-center">
+                                                <div className="sm:mt-0 mt-2">
                                                         <p className="mb-0 text-[.875rem] font-semibold capitalize">{phase.name}</p>
                                                         <p className="mb-0 text-[#8c9097] dark:text-white/50">{phase.description}</p>
                                                         <span className={`badge ${getPhaseStatus(phase)} mt-2`}>
                                                             {phase.completed ? 'Completed' : phase.active ? 'Active' : phase.skipped ? 'Skipped' : 'Pending'}
                                                         </span>
-                                                    </div>
-                                                    <div className="ms-auto">
-                                                        <span className="ltr:float-right rtl:float-left badge !bg-light text-[#8c9097] dark:text-white/50 timeline-badge whitespace-nowrap">
-                                                            {phase.estimatedActiveDate ? formatDate(phase.estimatedActiveDate) : 'Not started'}
-                                                        </span>
-                                                    </div>
                                                 </div>
+                                                    {phase.name.toLowerCase() === 'new' && (
+                                                <div className="ms-auto">
+                                                    <span className="ltr:float-right rtl:float-left badge !bg-light text-[#8c9097] dark:text-white/50 timeline-badge whitespace-nowrap">
+                                                                {formatDate(timelineData.createdAt)}
+                                                    </span>
+                                                        </div>
+                                                    )}
                                             </div>
                                         </div>
                                     </div>
-                                </li>
+                                </div>
+                            </li>
                             ))}
 
                             {/* Key Events */}
                             {timelineData.keyEvents?.map((event: any, index: number) => (
                                 <li key={`event-${index}`} className="border-t pt-4 mt-4">
-                                    <div className="timeline-time text-end">
+                                <div className="timeline-time text-end">
                                         <span className="date">KEY EVENT</span>
                                         <span className="time inline-block">{event.name}</span>
-                                    </div>
-                                    <div className="timeline-icon">
+                                </div>
+                                <div className="timeline-icon">
                                         <a aria-label="anchor" href="#!">
                                             <i className="ri-calendar-event-line text-orange-500"></i>
                                         </a>
-                                    </div>
-                                    <div className="timeline-body">
-                                        <div className="flex items-start timeline-main-content flex-wrap mt-0">
+                                </div>
+                                <div className="timeline-body">
+                                    <div className="flex items-start timeline-main-content flex-wrap mt-0">
                                             <div className="avatar avatar-md me-3 avatar-rounded md:mt-0 mt-6">
                                                 <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
                                                     <i className="ri-calendar-event-line text-orange-500" />
                                                 </div>
-                                            </div>
-                                            <div className="flex-grow">
-                                                <div className="flex items-center">
-                                                    <div className="sm:mt-0 mt-2">
+                                        </div>
+                                        <div className="flex-grow">
+                                            <div className="flex items-center">
+                                                <div className="sm:mt-0 mt-2">
                                                         <p className="mb-0 text-[.875rem] font-semibold">{event.name}</p>
                                                         <p className="mb-0 text-[#8c9097] dark:text-white/50">{event.description}</p>
-                                                    </div>
-                                                    <div className="ms-auto">
-                                                        <span className="ltr:float-right rtl:float-left badge !bg-light text-[#8c9097] dark:text-white/50 timeline-badge whitespace-nowrap">
-                                                            {formatDate(event.date)}
-                                                        </span>
-                                                    </div>
                                                 </div>
+                                                <div className="ms-auto">
+                                                    <span className="ltr:float-right rtl:float-left badge !bg-light text-[#8c9097] dark:text-white/50 timeline-badge whitespace-nowrap">
+                                                            {formatDate(event.date)}
+                                                    </span>
+                                                    </div>
                                             </div>
                                         </div>
                                     </div>
-                                </li>
+                                </div>
+                            </li>
                             ))}
                         </ul>
 
@@ -250,7 +252,7 @@ const LeadTimeline = () => {
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                        </div>
                         )}
                     </div>
                 </div>

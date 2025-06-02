@@ -20,6 +20,12 @@ const Profile = () => {
     const [leadsLoading, setLeadsLoading] = useState(false);
     const [totalLeads, setTotalLeads] = useState(0);
 
+    const nameFields = [
+        'Full Name', 'Owner Name', 'Traveler Name', 'Applicant Name',
+        'Business Name', 'Student Name', 'Project Name', 'Entity Name',
+        'Client Name', 'Startup Name', 'Company Name'
+    ];
+
     useEffect(() => {
         if (userId) {
             fetchUserDetails();
@@ -215,55 +221,70 @@ const Profile = () => {
                                                     </div>
                                                 ) : leads.length > 0 ? (
                                                     <div className="space-y-4">
-                                                        {leads.map((lead) => (
-                                                            <div key={lead.id} className="border rounded-lg p-4">
-                                                                <div className="flex justify-between items-start mb-3">
-                                                                    <div>
-                                                                        <h6 className="font-semibold text-lg">{lead.fieldsData['Full Name']}</h6>
-                                                                        <p className="text-sm text-gray-500">{lead.fieldsData['Email']}</p>
+                                                        {leads.map((lead) => {
+                                                            // Find the first matching name field
+                                                            const nameField = nameFields.find(field => lead.fieldsData[field]);
+                                                            const name = nameField ? lead.fieldsData[nameField] : 'N/A';
+                                                            
+                                                            return (
+                                                                <div key={lead.id} className="border rounded-lg p-4">
+                                                                    <div className="flex justify-between items-start mb-3">
+                                                                        <div>
+                                                                            <h6 className="font-semibold text-lg">{name}</h6>
+                                                                            <p className="text-sm text-gray-500">
+                                                                                {lead.fieldsData['Email'] || 'N/A'}
+                                                                            </p>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className={`badge ${
+                                                                                lead.status === 'new' ? 'bg-primary' :
+                                                                                lead.status === 'interested' ? 'bg-success' :
+                                                                                lead.status === 'not_interested' ? 'bg-danger' :
+                                                                                'bg-warning'
+                                                                            } text-white`}>
+                                                                                {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                                                                            </span>
+                                                                            <Link 
+                                                                                href={`/leads/timeline?id=${lead.id}`}
+                                                                                className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
+                                                                            >
+                                                                                <i className="ri-timeline-line me-1"></i>
+                                                                                View Timeline
+                                                                            </Link>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="flex items-center gap-3">
-                                                                        <span className={`badge ${
-                                                                            lead.status === 'new' ? 'bg-primary' :
-                                                                            lead.status === 'interested' ? 'bg-success' :
-                                                                            lead.status === 'not_interested' ? 'bg-danger' :
-                                                                            'bg-warning'
-                                                                        } text-white`}>
-                                                                            {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                                                                        </span>
-                                                                        <Link 
-                                                                            href={`/leads/timeline?id=${lead.id}`}
-                                                                            className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
-                                                                        >
-                                                                            <i className="ri-timeline-line me-1"></i>
-                                                                            View Timeline
-                                                                        </Link>
+                                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                                                        {Object.entries(lead.fieldsData).map(([key, value]: [string, any]) => {
+                                                                            // Skip name fields and email as they're already displayed
+                                                                            if (nameFields.includes(key) || key === 'Email') {
+                                                                                return null;
+                                                                            }
+                                                                            
+                                                                            // Handle base64 images
+                                                                            if (typeof value === 'string' && value.startsWith('data:image')) {
+                                                                                return (
+                                                                                    <div key={key} className="col-span-2 md:col-span-4">
+                                                                                        <p className="text-sm text-gray-500 mb-2">{key}</p>
+                                                                                        <img 
+                                                                                            src={value} 
+                                                                                            alt={key}
+                                                                                            className="max-w-full h-32 object-contain rounded border"
+                                                                                        />
+                                                                                    </div>
+                                                                                );
+                                                                            }
+                                                                            
+                                                                            return (
+                                                                                <div key={key}>
+                                                                                    <p className="text-sm text-gray-500">{key}</p>
+                                                                                    <p className="font-medium">{String(value) || 'N/A'}</p>
+                                                                                </div>
+                                                                            );
+                                                                        })}
                                                                     </div>
                                                                 </div>
-                                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                                                                    <div>
-                                                                        <p className="text-sm text-gray-500">Mobile</p>
-                                                                        <p className="font-medium">{lead.fieldsData['Mobile Number']}</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-sm text-gray-500">DOB</p>
-                                                                        <p className="font-medium">{lead.fieldsData['DOB']}</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-sm text-gray-500">Policy Term</p>
-                                                                        <p className="font-medium">{lead.fieldsData['Policy Term']}</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-sm text-gray-500">Occupation</p>
-                                                                        <p className="font-medium">{lead.fieldsData['Occupation']}</p>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="mt-3">
-                                                                    <p className="text-sm text-gray-500">Address</p>
-                                                                    <p className="font-medium">{lead.fieldsData['Address']}</p>
-                                                                </div>
-                                                            </div>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </div>
                                                 ) : (
                                                     <div className="text-center py-8">
@@ -278,7 +299,7 @@ const Profile = () => {
                                                 <div className="tab-pane show active fade !p-0 !border-0" role="tabpanel">
                                                     <div className="grid grid-cols-12 gap-4">
                                                         <div className="col-span-12 md:col-span-6">
-                                                            <div className="box !shadow-none border dark:border-defaultborder/10">
+                                                        <div className="box !shadow-none border dark:border-defaultborder/10">
                                                                 <div className="box-header">
                                                                     <h6 className="box-title">Personal Information</h6>
                                                                 </div>
@@ -319,7 +340,7 @@ const Profile = () => {
                                                                                 </div>
                                                                                 <span className={`badge ${userData?.kycStatus === 'verified' ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
                                                                                     {userData?.kycStatus || '--'}
-                                                                                </span>
+                                                                    </span>
                                                                             </div>
                                                                         </div>
                                                                     </div>

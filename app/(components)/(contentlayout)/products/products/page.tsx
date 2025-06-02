@@ -84,7 +84,7 @@ const Products = () => {
             setCategories(categoryOptions);
 
             // Then get products
-            const response = await axios.get(`${Base_url}products`, {
+            const response = await axios.get(`${Base_url}products?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

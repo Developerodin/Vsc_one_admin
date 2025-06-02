@@ -79,7 +79,7 @@ const Leads = () => {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}users`, {
+            const response = await axios.get(`${Base_url}users?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -94,7 +94,7 @@ const Leads = () => {
     const fetchProducts = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}products`, {
+            const response = await axios.get(`${Base_url}products?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -109,7 +109,7 @@ const Leads = () => {
     const fetchRawLeads = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}leads`, {
+            const response = await axios.get(`${Base_url}leads?limit=100`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
