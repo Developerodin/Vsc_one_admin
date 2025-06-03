@@ -454,8 +454,8 @@ const Profile = () => {
                                                                                 <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${userData?.kycDetails?.aadhaarVerified ? 'bg-primary' : 'bg-primary'}`}>
                                                                                     <i className="ri-id-card-line text-xs text-white"></i>
                                                                                 </div>
-                                                                                <span className={`badge ${userData?.kycDetails?.aadhaarVerified ? 'bg-blue-500 text-white' : 'bg-blue-500 text-white'}`}>
-                                                                                    {userData?.kycDetails?.aadhaarVerified ? 'Verified' : 'Pending'}
+                                                                                <span className={`badge ${userData?.kycDetails?.aadhaarVerified ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                    {userData?.kycStatus === 'verified' ? 'verified' : 'pending'}
                                                                                 </span>
                                                                             </div>
                                                                         </div>
@@ -481,7 +481,7 @@ const Profile = () => {
                                                                                     <i className="ri-bank-card-line text-xs text-white"></i>
                                                                                 </div>
                                                                                 <span className={`badge ${userData?.kycDetails?.panVerified ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
-                                                                                    {userData?.kycDetails?.panVerified ? 'Verified' : 'Pending'}
+                                                                                    {userData?.kycStatus === 'verified' ? 'verified' : 'pending'}
                                                                                 </span>
                                                                             </div>
                                                                         </div>
@@ -502,9 +502,9 @@ const Profile = () => {
                                                                                     <div className="border rounded-lg p-4">
                                                                                         <div className="flex items-center justify-between mb-3">
                                                                                             <h6 className="text-sm font-semibold capitalize">{doc.type} Document</h6>
-                                                                                            <span className={`badge ${doc.verified ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
+                                                                                            {/* <span className={`badge ${doc.verified ? 'bg-primary text-white' : 'bg-primary text-white'}`}>
                                                                                                 {doc.verified ? 'Verified' : 'Pending'}
-                                                                                            </span>
+                                                                                            </span> */}
                                                                                         </div>
                                                                                         <div className="text-center">
                                                                                             <img 

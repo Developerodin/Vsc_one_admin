@@ -176,21 +176,6 @@ const EditUser = () => {
       
       const userData = response.data;
 
-      // Handle profile picture URL
-      if (userData.profilePicture) {
-        userData.profilePicture = `${Base_url}uploads/${userData.profilePicture}`;
-      }
-
-      // Handle KYC documents
-      if (userData.kycDetails?.documents) {
-        userData.kycDetails.documents = userData.kycDetails.documents.map((doc: any) => ({
-          ...doc,
-          url: `${Base_url}uploads/${doc.url}`,
-          uploadedAt: new Date(doc.uploadedAt),
-          verifiedAt: doc.verifiedAt ? new Date(doc.verifiedAt) : null
-        }));
-      }
-
       // Format dates
       if (userData.lastLogin) {
         userData.lastLogin = new Date(userData.lastLogin);
@@ -225,12 +210,173 @@ const EditUser = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      await axios.patch(`${Base_url}users/${userId}`, formData, {
+
+      // Helper function to format date
+      const formatDate = (date: Date | string | null) => {
+        if (!date) return null;
+        if (typeof date === 'string') {
+          const parsedDate = new Date(date);
+          return isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString();
+        }
+        return date.toISOString();
+      };
+
+      // Helper function to handle image data
+      const handleImageData = async (imageData: string | File | null): Promise<string | undefined> => {
+        if (!imageData) return undefined;
+        
+        // If it's already a base64 string, return it
+        if (typeof imageData === 'string' && imageData.startsWith('data:image')) {
+          return imageData;
+        }
+        
+        // If it's a File object, convert to base64
+        if (imageData instanceof File) {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve(reader.result as string);
+            };
+            reader.readAsDataURL(imageData);
+          });
+        }
+
+        // If it's a URL string, return it as is
+        if (typeof imageData === 'string') {
+          return imageData;
+        }
+
+        return undefined;
+      };
+
+      // Define the type for the cleaned document
+      type CleanedDocument = {
+        type: string;
+        url: string;
+        verified: boolean;
+        verifiedBy: string | null;
+        verifiedAt: string | null;
+        rejectionReason: string;
+        uploadedAt: string;
+      };
+
+      // Define the type for the cleaned KYC details
+      type CleanedKycDetails = {
+        aadhaarNumber: string;
+        aadhaarVerified: boolean;
+        aadhaarVerificationDate: string | null;
+        panNumber: string;
+        panVerified: boolean;
+        panVerificationDate: string | null;
+        documents: CleanedDocument[];
+      };
+
+      // Handle profile picture
+      const profilePictureData = await handleImageData(formData.profilePicture);
+
+      // Prepare the data according to validation schema
+      const updateData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password || undefined, // Only include if not empty
+        mobileNumber: formData.mobileNumber,
+        role: formData.role,
+        status: formData.status,
+        kycStatus: formData.kycStatus,
+        profilePicture: profilePictureData,
+        onboardingStatus: formData.onboardingStatus,
+        address: {
+          street: formData.address.street,
+          city: formData.address.city,
+          state: formData.address.state,
+          pincode: formData.address.pincode,
+          country: formData.address.country
+        },
+        kycDetails: {
+          aadhaarNumber: formData.kycDetails.aadhaarNumber,
+          aadhaarVerified: formData.kycDetails.aadhaarVerified,
+          aadhaarVerificationDate: formatDate(formData.kycDetails.aadhaarVerificationDate),
+          panNumber: formData.kycDetails.panNumber,
+          panVerified: formData.kycDetails.panVerified,
+          panVerificationDate: formatDate(formData.kycDetails.panVerificationDate),
+          documents: await Promise.all(formData.kycDetails.documents.map(async doc => {
+            const url = await handleImageData(doc.url);
+            return {
+              type: doc.type,
+              url: url || '',
+              verified: doc.verified,
+              verifiedBy: doc.verifiedBy,
+              verifiedAt: formatDate(doc.verifiedAt),
+              rejectionReason: doc.rejectionReason,
+              uploadedAt: formatDate(doc.uploadedAt) || new Date().toISOString()
+            };
+          }))
+        },
+        totalCommission: formData.totalCommission,
+        totalLeads: formData.totalLeads,
+        totalSales: formData.totalSales,
+        lastLogin: formatDate(formData.lastLogin),
+        isEmailVerified: formData.isEmailVerified,
+        isMobileVerified: formData.isMobileVerified,
+        otp: {
+          code: formData.otp.code,
+          expiresAt: formatDate(formData.otp.expiresAt),
+          attempts: formData.otp.attempts
+        },
+        emailVerification: {
+          token: formData.emailVerification.token,
+          expiresAt: formatDate(formData.emailVerification.expiresAt),
+          verified: formData.emailVerification.verified
+        },
+        mobileVerification: {
+          token: formData.mobileVerification.token,
+          expiresAt: formatDate(formData.mobileVerification.expiresAt),
+          verified: formData.mobileVerification.verified
+        }
+      };
+
+      // Remove undefined values and null dates
+      const cleanData = Object.fromEntries(
+        Object.entries(updateData).filter(([_, v]) => {
+          if (v === undefined) return false;
+          if (v === null) return false;
+          return true;
+        })
+      ) as typeof updateData;
+
+      // Clean nested objects
+      if (cleanData.kycDetails && typeof cleanData.kycDetails === 'object') {
+        const kycDetails = cleanData.kycDetails;
+        const cleanedKycDetails: CleanedKycDetails = {
+          aadhaarNumber: kycDetails.aadhaarNumber,
+          aadhaarVerified: kycDetails.aadhaarVerified,
+          aadhaarVerificationDate: formatDate(kycDetails.aadhaarVerificationDate),
+          panNumber: kycDetails.panNumber,
+          panVerified: kycDetails.panVerified,
+          panVerificationDate: formatDate(kycDetails.panVerificationDate),
+          documents: await Promise.all(kycDetails.documents.map(async doc => {
+            const url = await handleImageData(doc.url);
+            return {
+              type: doc.type,
+              url: url || '',
+              verified: doc.verified,
+              verifiedBy: doc.verifiedBy,
+              verifiedAt: formatDate(doc.verifiedAt),
+              rejectionReason: doc.rejectionReason,
+              uploadedAt: formatDate(doc.uploadedAt) || new Date().toISOString()
+            };
+          }))
+        };
+
+        cleanData.kycDetails = cleanedKycDetails;
+      }
+
+      await axios.patch(`${Base_url}users/${userId}`, cleanData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      router.push('/users');
+      router.push('/users/users');
     } catch (error) {
       console.error("Error updating user:", error);
     } finally {
