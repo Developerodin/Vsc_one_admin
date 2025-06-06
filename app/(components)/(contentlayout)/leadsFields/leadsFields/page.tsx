@@ -27,23 +27,45 @@ const LeadsFields = () => {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState<ProductData[]>([]);
+    const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalResults, setTotalResults] = useState(0);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchProducts();
-    }, [currentPage]);
+    }, [currentPage, itemsPerPage]);
+
+    // Add search effect
+    useEffect(() => {
+        if (searchQuery.trim() === '') {
+            setFilteredProducts(products);
+            setTotalResults(products.length);
+            setTotalPages(Math.ceil(products.length / itemsPerPage));
+        } else {
+            const filtered = products.filter(product => {
+                const productName = product.name.toLowerCase();
+                const searchLower = searchQuery.toLowerCase();
+                return productName.includes(searchLower);
+            });
+            setFilteredProducts(filtered);
+            setTotalResults(filtered.length);
+            setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+        }
+        setCurrentPage(1);
+    }, [searchQuery, products, itemsPerPage]);
 
     const fetchProducts = async () => {
         try {
             const token = localStorage.getItem('token');
             
             // Fetch leads fields data from the new endpoint
-            const response = await axios.get(`${Base_url}leadsfields?limit=10&page=${currentPage}`, {
+            const response = await axios.get(`${Base_url}leadsfields?limit=${itemsPerPage}&page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -74,11 +96,16 @@ const LeadsFields = () => {
             });
 
             setProducts(formattedData);
+            setFilteredProducts(formattedData);
             setTotalPages(response.data.totalPages);
             setTotalResults(response.data.totalResults);
         } catch (error) {
             console.error('Error fetching leads fields:', error);
         }
+    };
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
     };
 
     const handleDelete = async (productId: string) => {
@@ -164,14 +191,20 @@ const LeadsFields = () => {
                         <div className="box-body">
                             <DataTable 
                                 headers={headers} 
-                                data={products}
+                                data={filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
                                 currentPage={currentPage}
                                 totalPages={totalPages}
                                 onPageChange={(page) => {
                                     setCurrentPage(page);
                                 }}
                                 totalItems={totalResults}
-                                itemsPerPage={10}
+                                itemsPerPage={itemsPerPage}
+                                onItemsPerPageChange={(size) => {
+                                    setItemsPerPage(size);
+                                    setCurrentPage(1);
+                                }}
+                                onSearch={handleSearch}
+                                searchQuery={searchQuery}
                             />
                         </div>
                     </div>

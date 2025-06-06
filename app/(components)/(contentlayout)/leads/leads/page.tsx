@@ -44,6 +44,7 @@ interface RawLead {
 const Leads = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [leads, setLeads] = useState<Lead[]>([]);
+    const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -55,6 +56,8 @@ const Leads = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -70,7 +73,7 @@ const Leads = () => {
         };
 
         fetchAllData();
-    }, [currentPage]);
+    }, [currentPage, itemsPerPage]);
 
     // Update formatted leads whenever raw leads change
     useEffect(() => {
@@ -78,6 +81,25 @@ const Leads = () => {
             formatLeadsData();
         }
     }, [rawLeads]);
+
+    // Add search effect
+    useEffect(() => {
+        if (searchQuery.trim() === '') {
+            setFilteredLeads(leads);
+            setTotalResults(leads.length);
+            setTotalPages(Math.ceil(leads.length / itemsPerPage));
+        } else {
+            const filtered = leads.filter(lead => {
+                const agentName = lead.agentName.toLowerCase();
+                const searchLower = searchQuery.toLowerCase();
+                return agentName.includes(searchLower);
+            });
+            setFilteredLeads(filtered);
+            setTotalResults(filtered.length);
+            setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+        }
+        setCurrentPage(1);
+    }, [searchQuery, leads, itemsPerPage]);
 
     const fetchUsers = async () => {
         try {
@@ -112,7 +134,7 @@ const Leads = () => {
     const fetchRawLeads = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}leads?limit=10&page=${currentPage}`, {
+            const response = await axios.get(`${Base_url}leads?limit=${itemsPerPage}&page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -129,10 +151,7 @@ const Leads = () => {
 
     const formatLeadsData = () => {
         const formattedData = rawLeads.map((lead: any, index: number) => {
-            // Get agent name from the agent object (which is now a full object, not just an ID)
             const agentName = lead.agent?.name || lead.agent?.email || '--';
-            
-            // Get product name from the nested products structure
             let productName = '--';
             if (lead.products && lead.products.length > 0) {
                 productName = lead.products[0]?.product?.name || '--';
@@ -166,6 +185,7 @@ const Leads = () => {
         });
 
         setLeads(formattedData);
+        setFilteredLeads(formattedData);
     };
 
     const handleDelete = async (id: string) => {
@@ -255,6 +275,10 @@ const Leads = () => {
         XLSX.writeFile(wb, 'leads_export.xlsx');
     };
 
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+    };
+
     return (
         <Fragment>
             <Seo title={"Leads"} />
@@ -285,14 +309,20 @@ const Leads = () => {
                             ) : (
                                 <DataTable 
                                     headers={headers} 
-                                    data={leads}
+                                    data={filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
                                     currentPage={currentPage}
                                     totalPages={totalPages}
                                     onPageChange={(page) => {
                                         setCurrentPage(page);
                                     }}
                                     totalItems={totalResults}
-                                    itemsPerPage={10}
+                                    itemsPerPage={itemsPerPage}
+                                    onItemsPerPageChange={(size) => {
+                                        setItemsPerPage(size);
+                                        setCurrentPage(1);
+                                    }}
+                                    onSearch={handleSearch}
+                                    searchQuery={searchQuery}
                                 />
                             )}
                         </div>

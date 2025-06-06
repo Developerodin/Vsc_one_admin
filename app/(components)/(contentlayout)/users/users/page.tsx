@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx';
 const Users = () => {
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -27,6 +28,23 @@ const Users = () => {
   useEffect(() => {
     fetchUsers();
   }, [currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredUsers(users);
+      setTotalResults(users.length);
+      setTotalPages(Math.ceil(users.length / itemsPerPage));
+    } else {
+      const filtered = users.filter(user => {
+        const userName = user.name.props.children[0].props.children.toLowerCase();
+        return userName.includes(searchQuery.toLowerCase());
+      });
+      setFilteredUsers(filtered);
+      setTotalResults(filtered.length);
+      setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    }
+    setCurrentPage(1); // Reset to first page when filtering
+  }, [searchQuery, users]);
 
   const fetchUsers = async () => {
     try {
@@ -96,6 +114,7 @@ const Users = () => {
       }));
 
       setUsers(formattedData);
+      setFilteredUsers(formattedData);
       setTotalPages(response.data.totalPages);
       setTotalResults(response.data.totalResults);
     } catch (error) {
@@ -161,7 +180,6 @@ const Users = () => {
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    // You can implement search functionality here if needed
   };
 
   const headers = [
@@ -208,7 +226,7 @@ const Users = () => {
               ) : (
                 <DataTable 
                   headers={headers} 
-                  data={users}
+                  data={filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={(page) => {
@@ -220,6 +238,8 @@ const Users = () => {
                     setItemsPerPage(size);
                     setCurrentPage(1); // Reset to first page when changing page size
                   }}
+                  onSearch={handleSearch}
+                  searchQuery={searchQuery}
                 />
               )}
             </div>

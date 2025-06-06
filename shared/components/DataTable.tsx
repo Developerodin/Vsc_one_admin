@@ -30,6 +30,8 @@ interface DataTableProps {
     totalItems: number;
     itemsPerPage: number;
     onItemsPerPageChange?: (size: number) => void;
+    onSearch?: (query: string) => void;
+    searchQuery?: string;
 }
 
 const DataTable: React.FC<DataTableProps> = ({ 
@@ -41,7 +43,9 @@ const DataTable: React.FC<DataTableProps> = ({
     onPageChange,
     totalItems,
     itemsPerPage,
-    onItemsPerPageChange
+    onItemsPerPageChange,
+    onSearch,
+    searchQuery = ''
 }) => {
     const handlePageChange = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -53,6 +57,12 @@ const DataTable: React.FC<DataTableProps> = ({
         const newSize = parseInt(e.target.value);
         if (onItemsPerPageChange) {
             onItemsPerPageChange(newSize);
+        }
+    };
+
+    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (onSearch) {
+            onSearch(e.target.value);
         }
     };
 
@@ -149,7 +159,7 @@ const DataTable: React.FC<DataTableProps> = ({
             <div className="box-header justify-between">
                 <div className="flex items-center gap-2">
                     <span className="text-sm">Show</span>
-                    <select 
+                    <select
                         className="ti-form-select form-select-sm w-auto"
                         value={itemsPerPage}
                         onChange={handleItemsPerPageChange}
@@ -162,12 +172,19 @@ const DataTable: React.FC<DataTableProps> = ({
                 </div>
                 <div className="flex flex-wrap">
                     <div className="me-3 my-1">
-                        <input className="ti-form-control form-control-sm" type="text" placeholder="Search Here" aria-label=".form-control-sm example" />
-                    </div>
+                                    <input
+                            className="ti-form-control form-control-sm" 
+                                        type="text"
+                            placeholder="Search Here" 
+                            value={searchQuery}
+                            onChange={handleSearch}
+                            aria-label="Search"
+                                    />
+                                </div>
                 </div>
             </div>
             <div className="box-body">
-                <div className="table-responsive">
+            <div className="table-responsive">
                     <table className="table table-hover whitespace-nowrap table-bordered min-w-full">
                         <thead>
                             <tr>
@@ -177,46 +194,46 @@ const DataTable: React.FC<DataTableProps> = ({
                                     </th>
                                 ))}
                             </tr>
-                        </thead>
-                        <tbody>
+                    </thead>
+                    <tbody>
                             {data.map((row, rowIndex) => (
                                 <tr key={rowIndex} className="border-t border-inherit border-solid hover:bg-gray-100 dark:hover:bg-light dark:border-defaultborder/10">
                                     {headers.map((header) => (
                                         <td key={header.key} className={`text-start ${header.className || ''}`}>
                                             {header.key === 'actions' && row.actions ? (
-                                                <div className="hstack flex gap-3 text-[.9375rem]">
+                                            <div className="hstack flex gap-3 text-[.9375rem]">
                                                     {row.actions.map((action, actionIndex) => (
-                                                        action.href ? (
-                                                            <Link
-                                                                key={actionIndex}
-                                                                aria-label="anchor"
-                                                                href={action.href}
-                                                                className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
-                                                                onClick={action.onClick}
-                                                            >
-                                                                <i className={action.icon}></i>
-                                                            </Link>
-                                                        ) : (
-                                                            <button
-                                                                key={actionIndex}
-                                                                className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
-                                                                onClick={action.onClick}
-                                                            >
-                                                                <i className={action.icon}></i>
-                                                            </button>
-                                                        )
-                                                    ))}
-                                                </div>
-                                            ) : (
+                                                    action.href ? (
+                                                        <Link
+                                                            key={actionIndex}
+                                                            aria-label="anchor"
+                                                            href={action.href}
+                                                            className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
+                                                            onClick={action.onClick}
+                                                        >
+                                                            <i className={action.icon}></i>
+                                                        </Link>
+                                                    ) : (
+                                                        <button
+                                                            key={actionIndex}
+                                                            className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
+                                                            onClick={action.onClick}
+                                                        >
+                                                            <i className={action.icon}></i>
+                                                        </button>
+                                                    )
+                                                ))}
+                                            </div>
+                                        ) : (
                                                 row[header.key]
-                                            )}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                        )}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
             </div>
             <div className="box-footer">
                 <div className="sm:flex items-center">
@@ -229,7 +246,7 @@ const DataTable: React.FC<DataTableProps> = ({
                                 {renderPaginationItems()}
                             </ul>
                         </nav>
-                    </div>
+                </div>
                 </div>
             </div>
         </div>

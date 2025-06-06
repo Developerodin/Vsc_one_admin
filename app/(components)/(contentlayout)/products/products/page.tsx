@@ -33,6 +33,7 @@ const Products = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState<ProductData[]>([]);
+    const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
     const [categories, setCategories] = useState<Array<{value: string, label: string}>>([]);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -40,6 +41,8 @@ const Products = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalResults, setTotalResults] = useState(0);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [searchQuery, setSearchQuery] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         type: '',
@@ -68,7 +71,30 @@ const Products = () => {
 
     useEffect(() => {
         fetchProducts();
-    }, [currentPage]);
+    }, [currentPage, itemsPerPage]);
+
+    useEffect(() => {
+        if (searchQuery.trim() === '') {
+            setFilteredProducts(products);
+            setTotalResults(products.length);
+            setTotalPages(Math.ceil(products.length / itemsPerPage));
+        } else {
+            const filtered = products.filter(product => {
+                const productName = product.name.toLowerCase();
+                const productType = product.type.toLowerCase();
+                const productCategory = product.category.toLowerCase();
+                const searchLower = searchQuery.toLowerCase();
+                
+                return productName.includes(searchLower) || 
+                       productType.includes(searchLower) || 
+                       productCategory.includes(searchLower);
+            });
+            setFilteredProducts(filtered);
+            setTotalResults(filtered.length);
+            setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+        }
+        setCurrentPage(1); // Reset to first page when filtering
+    }, [searchQuery, products]);
 
     const fetchProducts = async () => {
         try {
@@ -87,7 +113,7 @@ const Products = () => {
             setCategories(categoryOptions);
 
             // Then get products with pagination
-            const response = await axios.get(`${Base_url}products?limit=10&page=${currentPage}`, {
+            const response = await axios.get(`${Base_url}products?limit=${itemsPerPage}&page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -125,6 +151,7 @@ const Products = () => {
             });
 
             setProducts(formattedData);
+            setFilteredProducts(formattedData);
             setTotalPages(response.data.totalPages);
             setTotalResults(response.data.totalResults);
         } catch (error) {
@@ -290,6 +317,10 @@ const Products = () => {
 
         // Generate Excel file
         XLSX.writeFile(wb, 'products.xlsx');
+    };
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
     };
 
     const StatusOptions = [
@@ -613,14 +644,20 @@ const Products = () => {
                         <div className="box-body">
                             <DataTable 
                                 headers={headers} 
-                                data={products}
+                                data={filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
                                 currentPage={currentPage}
                                 totalPages={totalPages}
                                 onPageChange={(page) => {
                                     setCurrentPage(page);
                                 }}
                                 totalItems={totalResults}
-                                itemsPerPage={10}
+                                itemsPerPage={itemsPerPage}
+                                onItemsPerPageChange={(size) => {
+                                    setItemsPerPage(size);
+                                    setCurrentPage(1); // Reset to first page when changing page size
+                                }}
+                                onSearch={handleSearch}
+                                searchQuery={searchQuery}
                             />
                         </div>
                     </div>
