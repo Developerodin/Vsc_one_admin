@@ -1,24 +1,11 @@
 "use client"
 import Link from 'next/link'
-import React, { Fragment } from 'react'
-import {
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    useReactTable,
-    type ColumnDef,
-    type SortingState,
-    type VisibilityState,
-} from '@tanstack/react-table'
+import React from 'react'
 
 interface TableHeader {
     key: string;
     label: string;
     className?: string;
-    sortable?: boolean;
 }
 
 interface TableAction {
@@ -37,240 +24,215 @@ interface DataTableProps {
     headers: TableHeader[];
     data: TableRow[];
     className?: string;
-    customFilters?: {
-        label: string;
-        value: string;
-    }[];
-    onFilterChange?: (filterType: string, value: string) => void;
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    totalItems: number;
+    itemsPerPage: number;
+    onItemsPerPageChange?: (size: number) => void;
 }
 
-type CustomColumnDef<TData, TValue> = ColumnDef<TData, TValue> & {
-    meta?: {
-        className?: string;
-    };
-};
-
-const GlobalFilter = ({ filter, setFilter }: { filter: string; setFilter: (value: string) => void }) => {
-    return (
-        <span className="ms-auto">
-            <input
-                value={filter || ""}
-                onChange={(e) => setFilter(e.target.value)}
-                className="form-control !w-auto"
-                placeholder="Search..."
-            />
-        </span>
-    );
-};
-
-const DataTable: React.FC<DataTableProps> = ({ headers, data, className = '', customFilters, onFilterChange }) => {
-    const [sorting, setSorting] = React.useState<SortingState>([])
-    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-    const [globalFilter, setGlobalFilter] = React.useState('')
-    const [customFilterValues, setCustomFilterValues] = React.useState<{ [key: string]: string }>({})
-
-    const columnHelper = createColumnHelper<TableRow>()
-
-    const columns = React.useMemo(() => 
-        headers.map(header => 
-            columnHelper.accessor(header.key, {
-                header: header.label,
-                cell: info => info.getValue(),
-                meta: {
-                    className: header.className || '',
-                },
-                enableSorting: header.sortable !== false, // Enable sorting only if sortable is not explicitly false
-            })
-        ), [headers]
-    );
-
-    const table = useReactTable({
-        data,
-        columns,
-        state: {
-            sorting,
-            columnVisibility,
-            globalFilter,
-        },
-        onSortingChange: setSorting,
-        onColumnVisibilityChange: setColumnVisibility,
-        onGlobalFilterChange: setGlobalFilter,
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-    });
-
-    const handleCustomFilterChange = (filterType: string, value: string) => {
-        setCustomFilterValues(prev => ({
-            ...prev,
-            [filterType]: value
-        }));
-        onFilterChange?.(filterType, value);
+const DataTable: React.FC<DataTableProps> = ({ 
+    headers, 
+    data, 
+    className = '',
+    currentPage,
+    totalPages,
+    onPageChange,
+    totalItems,
+    itemsPerPage,
+    onItemsPerPageChange
+}) => {
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            onPageChange(page);
+        }
     };
 
-    return (
-        <>
-            <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <select
-                        className="selectpage border"
-                        value={table.getState().pagination.pageSize}
-                        onChange={e => {
-                            table.setPageSize(Number(e.target.value))
-                        }}
+    const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newSize = parseInt(e.target.value);
+        if (onItemsPerPageChange) {
+            onItemsPerPageChange(newSize);
+        }
+    };
+
+    const renderPaginationItems = () => {
+        const items = [];
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        // Previous button
+        items.push(
+            <li key="prev" className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                <button 
+                    className="page-link" 
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                >
+                    Prev
+                </button>
+            </li>
+        );
+
+        // First page
+        if (startPage > 1) {
+            items.push(
+                <li key="1" className="page-item">
+                    <button className="page-link" onClick={() => handlePageChange(1)}>1</button>
+                </li>
+            );
+            if (startPage > 2) {
+                items.push(
+                    <li key="start-ellipsis" className="page-item disabled">
+                        <span className="page-link">...</span>
+                    </li>
+                );
+            }
+        }
+
+        // Page numbers
+        for (let i = startPage; i <= endPage; i++) {
+            items.push(
+                <li key={i} className={`page-item ${currentPage === i ? 'active' : ''}`}>
+                    <button 
+                        className={`page-link ${currentPage === i ? 'active' : ''}`}
+                        onClick={() => handlePageChange(i)}
                     >
-                        {[10, 25, 50].map((pageSize) => (
-                            <option key={pageSize} value={pageSize}>
-                                Show {pageSize}
-                            </option>
-                        ))}
+                        {i}
+                    </button>
+                </li>
+            );
+        }
+
+        // Last page
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                items.push(
+                    <li key="end-ellipsis" className="page-item disabled">
+                        <span className="page-link">...</span>
+                    </li>
+                );
+            }
+            items.push(
+                <li key={totalPages} className="page-item">
+                    <button className="page-link" onClick={() => handlePageChange(totalPages)}>{totalPages}</button>
+                </li>
+            );
+        }
+
+        // Next button
+        items.push(
+            <li key="next" className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                <button 
+                    className="page-link" 
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                >
+                    Next
+                </button>
+            </li>
+        );
+
+        return items;
+    };
+
+    const startItem = ((currentPage - 1) * itemsPerPage) + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    return (
+        <div className="box">
+            <div className="box-header justify-between">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm">Show</span>
+                    <select 
+                        className="ti-form-select form-select-sm w-auto"
+                        value={itemsPerPage}
+                        onChange={handleItemsPerPageChange}
+                    >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
                     </select>
-                    {customFilters && customFilters.length > 0 && (
-                        <div className="flex items-center gap-3">
-                            {customFilters.map((filter) => (
-                                <div key={filter.value} className="flex items-center gap-1">
-                                    <label className="text-xs font-medium text-gray-600 whitespace-nowrap">{filter.label}:</label>
-                                    <input
-                                        type="text"
-                                        className="form-control !py-1 !px-2 !text-xs !w-48"
-                                        placeholder={`Filter ${filter.label}`}
-                                        value={customFilterValues[filter.value] || ''}
-                                        onChange={(e) => handleCustomFilterChange(filter.value, e.target.value)}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <span className="text-sm">entries</span>
                 </div>
-                <GlobalFilter filter={globalFilter} setFilter={setGlobalFilter} />
+                <div className="flex flex-wrap">
+                    <div className="me-3 my-1">
+                        <input className="ti-form-control form-control-sm" type="text" placeholder="Search Here" aria-label=".form-control-sm example" />
+                    </div>
+                </div>
             </div>
-            <div className="table-responsive">
-                <table className={`table whitespace-nowrap min-w-full ${className}`}>
-                    <thead className="bg-primary/10">
-                        {table.getHeaderGroups().map(headerGroup => (
-                            <tr key={headerGroup.id} className="border-b border-primary/10">
-                                {headerGroup.headers.map(header => (
-                                    <th
-                                        key={header.id}
-                                        className={`text-start ${(header.column.columnDef as CustomColumnDef<TableRow, any>).meta?.className || ''}`}
-                                        onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
-                                        style={{ cursor: header.column.getCanSort() ? 'pointer' : 'default' }}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
-                                            {header.column.getCanSort() && (
-                                                <span className="flex flex-col">
-                                                    {{
-                                                        asc: <i className="ri-arrow-up-s-line text-xs"></i>,
-                                                        desc: <i className="ri-arrow-down-s-line text-xs"></i>,
-                                                    }[header.column.getIsSorted() as string] ?? (
-                                                        <i className="ri-arrow-up-down-line text-xs opacity-50"></i>
-                                                    )}
-                                                </span>
-                                            )}
-                                        </div>
+            <div className="box-body">
+                <div className="table-responsive">
+                    <table className="table table-hover whitespace-nowrap table-bordered min-w-full">
+                        <thead>
+                            <tr>
+                                {headers.map((header) => (
+                                    <th key={header.key} scope="col" className={`text-start ${header.className || ''}`}>
+                                        {header.label}
                                     </th>
                                 ))}
                             </tr>
-                        ))}
-                    </thead>
-                    <tbody>
-                        {table.getRowModel().rows.map(row => (
-                            <tr key={row.id} className="border-b border-primary/10">
-                                {row.getVisibleCells().map(cell => (
-                                    <td
-                                        key={cell.id}
-                                        className={`text-start ${(cell.column.columnDef as CustomColumnDef<TableRow, any>).meta?.className || ''}`}
-                                    >
-                                        {cell.column.id === 'actions' && row.original.actions ? (
-                                            <div className="hstack flex gap-3 text-[.9375rem]">
-                                                {row.original.actions.map((action: TableAction, actionIndex: number) => (
-                                                    action.href ? (
-                                                        <Link
-                                                            key={actionIndex}
-                                                            aria-label="anchor"
-                                                            href={action.href}
-                                                            className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
-                                                            onClick={action.onClick}
-                                                        >
-                                                            <i className={action.icon}></i>
-                                                        </Link>
-                                                    ) : (
-                                                        <button
-                                                            key={actionIndex}
-                                                            className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
-                                                            onClick={action.onClick}
-                                                        >
-                                                            <i className={action.icon}></i>
-                                                        </button>
-                                                    )
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            flexRender(cell.column.columnDef.cell, cell.getContext())
-                                        )}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            <div className="block sm:flex items-center mt-4">
-                <div className="">
-                    Page{" "}
-                    <strong>
-                        {table.getState().pagination.pageIndex + 1} of{" "}
-                        {table.getPageCount()}
-                    </strong>{" "}
-                </div>
-                <div className="sm:ms-auto float-right my-1 sm:my-0">
-                    <button
-                        className="ti-btn ti-btn-light me-2 mb-2 sm:mb-0 sm:inline block"
-                        onClick={() => table.setPageIndex(0)}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        {" Previous "}
-                    </button>
-                    <button
-                        className="ti-btn ti-btn-light me-2 mb-2 sm:mb-0"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        {" << "}
-                    </button>
-                    <button
-                        className="ti-btn ti-btn-light me-2 mb-2 sm:mb-0"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        {" < "}
-                    </button>
-                    <button
-                        className="ti-btn ti-btn-light me-2 mb-2 sm:mb-0"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        {" > "}
-                    </button>
-                    <button
-                        className="ti-btn ti-btn-light me-2 mb-2 sm:mb-0"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        {" >> "}
-                    </button>
-                    <button
-                        className="ti-btn ti-btn-light sm:inline block"
-                        onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        {" Next "}
-                    </button>
+                        </thead>
+                        <tbody>
+                            {data.map((row, rowIndex) => (
+                                <tr key={rowIndex} className="border-t border-inherit border-solid hover:bg-gray-100 dark:hover:bg-light dark:border-defaultborder/10">
+                                    {headers.map((header) => (
+                                        <td key={header.key} className={`text-start ${header.className || ''}`}>
+                                            {header.key === 'actions' && row.actions ? (
+                                                <div className="hstack flex gap-3 text-[.9375rem]">
+                                                    {row.actions.map((action, actionIndex) => (
+                                                        action.href ? (
+                                                            <Link
+                                                                key={actionIndex}
+                                                                aria-label="anchor"
+                                                                href={action.href}
+                                                                className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
+                                                                onClick={action.onClick}
+                                                            >
+                                                                <i className={action.icon}></i>
+                                                            </Link>
+                                                        ) : (
+                                                            <button
+                                                                key={actionIndex}
+                                                                className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
+                                                                onClick={action.onClick}
+                                                            >
+                                                                <i className={action.icon}></i>
+                                                            </button>
+                                                        )
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                row[header.key]
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </>
+            <div className="box-footer">
+                <div className="sm:flex items-center">
+                    <div className="dark:text-defaulttextcolor/70">
+                        Showing {startItem} to {endItem} of {totalItems} Entries
+                    </div>
+                    <div className="ms-auto">
+                        <nav aria-label="Page navigation" className="pagination-style-4">
+                            <ul className="ti-pagination mb-0">
+                                {renderPaginationItems()}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 

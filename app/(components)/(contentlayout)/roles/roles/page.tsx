@@ -32,16 +32,13 @@ const Roles = () => {
   const [loadingPermissions, setLoadingPermissions] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [updatingPermissions, setUpdatingPermissions] = useState(false);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-    totalResults: 0
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
 
   useEffect(() => {
     fetchRoles();
-  }, [pagination.page]);
+  }, [currentPage]);
 
   const fetchPermissions = async () => {
     try {
@@ -64,37 +61,30 @@ const Roles = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${Base_url}roles`, {
+      const response = await axios.get(`${Base_url}roles?limit=10&page=${currentPage}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const { results, page, limit, totalPages, totalResults } = response.data;
-      
-      setPagination({
-        page,
-        limit,
-        totalPages,
-        totalResults
-      });
+      console.log('Roles API Response:', response.data); // Debug log
 
-      const formattedData = results.map((role: any) => ({
-        name: (
-          <div className="flex items-center gap-2">
-            <span>{role.name || "--"}</span>
-          </div>
-        ),
+      // Check if response.data is an array or has a results property
+      const rolesData = Array.isArray(response.data) ? response.data : response.data.results;
+      
+      // Set pagination data if available
+      if (!Array.isArray(response.data)) {
+        setTotalPages(response.data.totalPages || 1);
+        setTotalResults(response.data.totalResults || rolesData.length);
+      } else {
+        setTotalPages(1);
+        setTotalResults(rolesData.length);
+      }
+
+      const formattedData = rolesData.map((role: any) => ({
+        name: role.name || "--",
         description: role.description || "--",
-        status: (
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            role.isActive 
-              ? 'bg-success/10 text-success' 
-              : 'bg-danger/10 text-danger'
-          }`}>
-            {role.isActive ? 'Active' : 'Inactive'}
-          </span>
-        ),
+        status: role.isActive ? 'Active' : 'Inactive',
         permissionManager: (
           <button
             onClick={() => openPermissionModal(role)}
@@ -118,10 +108,11 @@ const Roles = () => {
         ],
       }));
 
+      console.log('Formatted Roles Data:', formattedData); // Debug log
       setRoles(formattedData);
     } catch (error) {
-      setError("Failed to fetch roles");
       console.error("Error fetching roles:", error);
+      setError("Failed to fetch roles");
     } finally {
       setLoading(false);
     }
@@ -278,6 +269,13 @@ const Roles = () => {
                 <DataTable 
                   headers={headers} 
                   data={roles}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                  }}
+                  totalItems={totalResults}
+                  itemsPerPage={10}
                 />
               )}
             </div>

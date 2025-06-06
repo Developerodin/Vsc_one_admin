@@ -16,6 +16,9 @@ const Subcategory = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [subcategories, setSubcategories] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResults, setTotalResults] = useState(0);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -33,19 +36,23 @@ const Subcategory = () => {
             }));
             fetchSubcategories();
         }
-    }, [categoryId]);
+    }, [categoryId, currentPage]);
 
     const fetchSubcategories = async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}subcategories/category/${categoryId}`, {
+            const response = await axios.get(`${Base_url}subcategories/category/${categoryId}?limit=10&page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
 
-            const formattedData = response.data.map((subcategory: any, index: number) => ({
+            console.log('Subcategories response:', response.data);
+
+            const subcategoriesData = Array.isArray(response.data) ? response.data : response.data.results;
+
+            const formattedData = subcategoriesData.map((subcategory: any, index: number) => ({
                 srNo: index + 1,
                 subcategory: subcategory.name || '--',
                 createdDate: new Date(subcategory.createdAt).toLocaleDateString('en-GB', {
@@ -74,6 +81,14 @@ const Subcategory = () => {
             }));
 
             setSubcategories(formattedData);
+            
+            if (!Array.isArray(response.data)) {
+                setTotalPages(response.data.totalPages || 1);
+                setTotalResults(response.data.totalResults || formattedData.length);
+            } else {
+                setTotalPages(1);
+                setTotalResults(formattedData.length);
+            }
         } catch (error) {
             console.error('Error fetching subcategories:', error);
         } finally {
@@ -248,7 +263,17 @@ const Subcategory = () => {
                             </div>
                         </div>
                         <div className="box-body">
-                            <DataTable headers={headers} data={subcategories} />
+                            <DataTable 
+                                headers={headers} 
+                                data={subcategories}
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={(page) => {
+                                    setCurrentPage(page);
+                                }}
+                                totalItems={totalResults}
+                                itemsPerPage={10}
+                            />
                         </div>
                     </div>
                 </div>

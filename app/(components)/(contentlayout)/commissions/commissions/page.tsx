@@ -84,26 +84,37 @@ const Commissions = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchCommissions();
-  }, [currentPage, searchTerm, statusFilter]);
+  }, [currentPage, itemsPerPage]);
 
   const fetchCommissions = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${Base_url}commissions`, {
+      const response = await axios.get(`${Base_url}commissions?limit=${itemsPerPage}&page=${currentPage}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         }
       });
-      console.log(response.data);
-      setCommissions(response.data.results || []);
+      console.log('Commissions API Response:', response.data);
 
-    
+      const commissionsData = Array.isArray(response.data) ? response.data : response.data.results;
+      
+      if (!Array.isArray(response.data)) {
+        setTotalPages(response.data.totalPages || 1);
+        setTotalResults(response.data.totalResults || commissionsData.length);
+      } else {
+        setTotalPages(1);
+        setTotalResults(commissionsData.length);
+      }
+
+      setCommissions(commissionsData);
     } catch (error) {
       console.error("Error fetching commissions:", error);
     } finally {
@@ -209,8 +220,17 @@ const Commissions = () => {
                 <DataTable
                   headers={tableHeaders}
                   data={tableData}
-                  customFilters={customFilters}
-                  onFilterChange={handleFilterChange}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                  }}
+                  totalItems={totalResults}
+                  itemsPerPage={itemsPerPage}
+                  onItemsPerPageChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1); // Reset to first page when changing page size
+                  }}
                 />
               )}
             </div>

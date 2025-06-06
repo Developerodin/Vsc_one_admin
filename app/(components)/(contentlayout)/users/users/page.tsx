@@ -7,70 +7,32 @@ import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import DataTable from "@/shared/components/DataTable";
 import axios from "axios";
 import { Base_url } from "@/app/api/config/BaseUrl";
-import Select from "react-select";
 import ConfirmModal from "@/app/shared/components/ConfirmModal";
 import * as XLSX from 'xlsx';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    country: string;
-  };
-  totalCommission: number;
-  totalLeads: number;
-  lastLogin: string;
-}
 
 const Users = () => {
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const [filters, setFilters] = useState({
-    name: '',
-    email: '',
-    city: ''
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
-
-  const handleFilterChange = (filterType: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterType]: value
-    }));
-  };
-
-  useEffect(() => {
-    const filtered = users.filter(user => {
-      const nameMatch = user.name.props.children[0].props.children.toLowerCase().includes(filters.name.toLowerCase());
-      const emailMatch = user.contact.props.children[1].props.children.toLowerCase().includes(filters.email.toLowerCase());
-      const cityMatch = user.address.toLowerCase().includes(filters.city.toLowerCase());
-      
-      return nameMatch && emailMatch && cityMatch;
-    });
-    
-    setFilteredUsers(filtered);
-  }, [filters, users]);
+  }, [currentPage, itemsPerPage]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${Base_url}users?limit=100`, {
+      const response = await axios.get(`${Base_url}users?limit=${itemsPerPage}&page=${currentPage}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -134,17 +96,14 @@ const Users = () => {
       }));
 
       setUsers(formattedData);
-      setFilteredUsers(formattedData);
+      setTotalPages(response.data.totalPages);
+      setTotalResults(response.data.totalResults);
     } catch (error) {
       setError("Failed to fetch users");
       console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const openUserModal = (userId: string) => {
-    router.push(`/profile/profile?id=${userId}`);
   };
 
   const viewUserProfile = (userId: string) => {
@@ -186,7 +145,6 @@ const Users = () => {
   };
 
   const handleExport = () => {
-    // Create a new array without the actions column
     const exportData = users.map(user => ({
       'Name': user.name.props.children[0].props.children,
       'Mobile Number': user.contact.props.children[0].props.children,
@@ -195,31 +153,25 @@ const Users = () => {
       'Address': user.address
     }));
 
-    // Create a worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Create a workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Users');
-
-    // Generate Excel file
     XLSX.writeFile(wb, 'users.xlsx');
   };
 
-  const filterOptions = [
-    { label: 'Name', value: 'name' },
-    { label: 'Email', value: 'email' },
-    { label: 'City', value: 'city' }
-  ];
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    // You can implement search functionality here if needed
+  };
 
   const headers = [
-    { key: "profile", label: "Profile", sortable: false },
-    { key: "name", label: "Name", sortable: true },
-    { key: "contact", label: "Contact", sortable: false },
-    { key: "totalCommission", label: "Total Commission", sortable: true },
-    { key: "address", label: "Address", sortable: false },
-    { key: "createdDate", label: "Created Date", sortable: true },
-    { key: "actions", label: "Actions", sortable: false },
+    { key: "profile", label: "Profile" },
+    { key: "name", label: "Name" },
+    { key: "contact", label: "Contact" },
+    { key: "totalCommission", label: "Total Commission" },
+    { key: "address", label: "Address" },
+    { key: "createdDate", label: "Created Date" },
+    { key: "actions", label: "Actions" },
   ];
 
   return (
@@ -256,9 +208,18 @@ const Users = () => {
               ) : (
                 <DataTable 
                   headers={headers} 
-                  data={filteredUsers} 
-                  customFilters={filterOptions}
-                  onFilterChange={handleFilterChange}
+                  data={users}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                  }}
+                  totalItems={totalResults}
+                  itemsPerPage={itemsPerPage}
+                  onItemsPerPageChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1); // Reset to first page when changing page size
+                  }}
                 />
               )}
             </div>

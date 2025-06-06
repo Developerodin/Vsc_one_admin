@@ -37,6 +37,9 @@ const Products = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResults, setTotalResults] = useState(0);
     const [formData, setFormData] = useState({
         name: '',
         type: '',
@@ -65,7 +68,7 @@ const Products = () => {
 
     useEffect(() => {
         fetchProducts();
-    }, []);
+    }, [currentPage]);
 
     const fetchProducts = async () => {
         try {
@@ -83,8 +86,8 @@ const Products = () => {
             }));
             setCategories(categoryOptions);
 
-            // Then get products
-            const response = await axios.get(`${Base_url}products?limit=100`, {
+            // Then get products with pagination
+            const response = await axios.get(`${Base_url}products?limit=10&page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -122,6 +125,8 @@ const Products = () => {
             });
 
             setProducts(formattedData);
+            setTotalPages(response.data.totalPages);
+            setTotalResults(response.data.totalResults);
         } catch (error) {
             console.error('Error fetching products:', error);
         }
@@ -606,7 +611,17 @@ const Products = () => {
                             </div>
                         </div>
                         <div className="box-body">
-                            <DataTable headers={headers} data={products} />
+                            <DataTable 
+                                headers={headers} 
+                                data={products}
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={(page) => {
+                                    setCurrentPage(page);
+                                }}
+                                totalItems={totalResults}
+                                itemsPerPage={10}
+                            />
                         </div>
                     </div>
                 </div>

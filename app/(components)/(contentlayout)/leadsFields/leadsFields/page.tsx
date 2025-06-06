@@ -30,17 +30,20 @@ const LeadsFields = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResults, setTotalResults] = useState(0);
 
     useEffect(() => {
         fetchProducts();
-    }, []);
+    }, [currentPage]);
 
     const fetchProducts = async () => {
         try {
             const token = localStorage.getItem('token');
             
             // Fetch leads fields data from the new endpoint
-            const response = await axios.get(`${Base_url}leadsfields?limit=100`, {
+            const response = await axios.get(`${Base_url}leadsfields?limit=10&page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -71,6 +74,8 @@ const LeadsFields = () => {
             });
 
             setProducts(formattedData);
+            setTotalPages(response.data.totalPages);
+            setTotalResults(response.data.totalResults);
         } catch (error) {
             console.error('Error fetching leads fields:', error);
         }
@@ -157,7 +162,17 @@ const LeadsFields = () => {
                             </div>
                         </div>
                         <div className="box-body">
-                            <DataTable headers={headers} data={products} />
+                            <DataTable 
+                                headers={headers} 
+                                data={products}
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={(page) => {
+                                    setCurrentPage(page);
+                                }}
+                                totalItems={totalResults}
+                                itemsPerPage={10}
+                            />
                         </div>
                     </div>
                 </div>

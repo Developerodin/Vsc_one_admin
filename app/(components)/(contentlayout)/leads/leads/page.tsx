@@ -46,6 +46,9 @@ const Leads = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResults, setTotalResults] = useState(0);
     const [users, setUsers] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [rawLeads, setRawLeads] = useState<RawLead[]>([]);
@@ -67,7 +70,7 @@ const Leads = () => {
         };
 
         fetchAllData();
-    }, []);
+    }, [currentPage]);
 
     // Update formatted leads whenever raw leads change
     useEffect(() => {
@@ -109,13 +112,15 @@ const Leads = () => {
     const fetchRawLeads = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}leads?limit=100`, {
+            const response = await axios.get(`${Base_url}leads?limit=10&page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
             console.log('Leads data:', response.data.results);
             setRawLeads(response.data.results);
+            setTotalPages(response.data.totalPages);
+            setTotalResults(response.data.totalResults);
         } catch (err) {
             console.error('Error fetching leads:', err);
             throw err;
@@ -278,7 +283,17 @@ const Leads = () => {
                             ) : error ? (
                                 <div className="text-center py-4 text-danger">{error}</div>
                             ) : (
-                                <DataTable headers={headers} data={leads} />
+                                <DataTable 
+                                    headers={headers} 
+                                    data={leads}
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={(page) => {
+                                        setCurrentPage(page);
+                                    }}
+                                    totalItems={totalResults}
+                                    itemsPerPage={10}
+                                />
                             )}
                         </div>
                     </div>

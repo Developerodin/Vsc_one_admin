@@ -34,6 +34,10 @@ const Category = () => {
     null
   );
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -53,13 +57,13 @@ const Category = () => {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [currentPage, itemsPerPage]);
 
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
       console.log("token", token);
-      const response = await axios.get(`${Base_url}categories?limit=100`, {
+      const response = await axios.get(`${Base_url}categories?limit=${itemsPerPage}&page=${currentPage}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -157,6 +161,8 @@ const Category = () => {
       );
 
       setCategories(formattedData.flat());
+      setTotalPages(response.data.totalPages);
+      setTotalResults(response.data.totalResults);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -508,7 +514,21 @@ const Category = () => {
               </div>
             </div>
             <div className="box-body">
-              <DataTable headers={headers} data={categories} />
+              <DataTable 
+                headers={headers} 
+                data={categories}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                }}
+                totalItems={totalResults}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={(size) => {
+                  setItemsPerPage(size);
+                  setCurrentPage(1); // Reset to first page when changing page size
+                }}
+              />
             </div>
           </div>
         </div>
