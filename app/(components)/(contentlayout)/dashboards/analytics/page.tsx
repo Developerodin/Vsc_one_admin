@@ -3,13 +3,58 @@ import { Visitorsbychannel } from '@/shared/data/dashboards/analyticsdata'
 import Pageheader from '@/shared/layout-components/page-header/pageheader'
 import Seo from '@/shared/layout-components/seo/seo'
 import Link from 'next/link'
-import React, { Fragment } from 'react'
+import React, { Fragment, useState, useEffect } from 'react'
 import * as Analyticsdata from "@/shared/data/dashboards/analyticsdata";
+import axios from 'axios'
+import { Base_url } from '@/app/api/config/BaseUrl'
 import dynamic from "next/dynamic";
 import ProtectedRoute from "@/shared/components/ProtectedRoute";
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
+interface DashboardStats {
+    leads: {
+        total: number;
+        byStatus: {
+            new: number;
+            interested: number;
+            contacted: number;
+            closed: number;
+        };
+    };
+    summary: {
+        totalLeads: number;
+        totalUsers: number;
+        totalProducts: number;
+        totalCategories: number;
+        totalTransactions: number;
+        totalAmount: number;
+    };
+}
+
 const Analytics = () => {
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchDashboardStats();
+    }, []);
+
+    const fetchDashboardStats = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${Base_url}dashboard/stats`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            setStats(response.data);
+        } catch (error) {
+            console.error('Error fetching dashboard stats:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <Fragment>
             <Seo title={"Analytics"} />
@@ -23,15 +68,14 @@ const Analytics = () => {
                                     <div className="flex flex-wrap items-center justify-between">
                                         <div>
                                             <h6 className="font-semibold mb-3 text-[1rem]">Total Users</h6>
-                                            <span className="text-[1.5625rem] font-semibold">9,789</span>
-                                            <span className="block text-success text-[0.75rem]">+0.892 <i className="ti ti-trending-up ms-1"></i></span>
+                                            <span className="text-[1.5625rem] font-semibold">
+                                                {loading ? 'Loading...' : stats?.summary.totalUsers || 0}
+                                            </span>
                                         </div>
                                         <div id="analytics-users">
-                                            <ReactApexChart
-                                            options={Analyticsdata.Totalusers.options}
-                                            series={Analyticsdata.Totalusers.series}
-                                            type="line" height={40} width={120}
-                                            />
+                                            <span className="avatar avatar-md bg-primary text-white">
+                                                <i className="ri-user-3-line"></i>
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -42,9 +86,10 @@ const Analytics = () => {
                                 <div className="box-body">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h6 className="font-semibold mb-3 text-[1rem]">Live Visitors</h6>
-                                            <span className="text-[1.5625rem] font-semibold">12,240</span>
-                                            <span className="block text-danger text-[0.75rem]">+0.59<i className="ti ti-trending-down ms-1 inline-flex"></i></span>
+                                            <h6 className="font-semibold mb-3 text-[1rem]">Total Leads</h6>
+                                            <span className="text-[1.5625rem] font-semibold">
+                                                {loading ? 'Loading...' : stats?.summary.totalLeads || 0}
+                                            </span>
                                         </div>
                                         <div>
                                             <span className="avatar avatar-md bg-secondary text-white">
@@ -56,21 +101,21 @@ const Analytics = () => {
                             </div>
                         </div>
                         <div className="xl:col-span-4 lg:col-span-4 md:col-span-4 sm:col-span-6 col-span-12">
-                            <div className="box overflow-hidden">
-                                <div className="box-body mb-3">
+                            <div className="box">
+                                <div className="box-body">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h6 className="font-semibold text-primary mb-4 text-[1rem]">Bounce Rate</h6>
-                                            <span className="text-[1.5625rem] flex items-center">77.3% <span className=" text-[0.75rem] text-warning opacity-[0.7] ms-2">+0.59<i className="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span></span>
+                                            <h6 className="font-semibold mb-3 text-[1rem]">Total Categories</h6>
+                                            <span className="text-[1.5625rem] font-semibold">
+                                                {loading ? 'Loading...' : stats?.summary.totalCategories || 0}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="avatar avatar-md bg-success text-white">
+                                                <i className="ri-folder-line"></i>
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
-                                <div id="analytics-bouncerate" className="mt-1 w-full">
-                                    <ReactApexChart
-                                            options={Analyticsdata.Bouncerate.options}
-                                            series={Analyticsdata.Bouncerate.series}
-                                            type="line" height={40} width={"100%"}
-                                            />
                                 </div>
                             </div>
                         </div>
@@ -275,47 +320,7 @@ const Analytics = () => {
                 </div>
                 <div className="xl:col-span-5 col-span-12">
                     <div className="grid grid-cols-12 gap-x-6">
-                        <div className="xxl:col-span-5 cxl:ol-span-12 col-span-12">
-                            <div className="box custom-card upgrade-card text-white">
-                                <div className="box-body text-white">
-                                    <span className="avatar avatar-xxl !border-0">
-                                        <img src="../../assets/images/media/media-84.png" alt="" />
-                                    </span>
-                                    <div className="upgrade-card-content">
-                                        <span className="opacity-[0.7] font-normal mb-1 !text-white">Plan is expiring !</span>
-                                        <span className="text-[0.9375rem] font-semibold block mb-[3rem] upgrade-text !text-white">Upgrade to premium</span>
-                                        <button type="button" className="ti-btn !py-1 !px-2 bg-light text-defaulttextcolor !text-[0.75rem] font-medium ti-btn-wave">Upgrade Now</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="box">
-                                <div className="box-body !p-1">
-                                    <div className="flex items-center flex-wrap">
-                                        <div id="analytics-followers">
-                                            <ReactApexChart options={Analyticsdata.Impressions.options} series={Analyticsdata.Impressions.series} type="radialBar" width={100} height={120} />
-                                        </div>
-                                        <div className="ms-1">
-                                            <p className="mb-1 text-[#8c9097] dark:text-white/50">Impressions</p>
-                                            <h5 className="font-semibold mb-0 text-[1.25rem]">9,903</h5>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="box">
-                                <div className="box-body !p-1">
-                                    <div className="flex items-center flex-wrap">
-                                        <div id="analytics-views">
-                                            <ReactApexChart options={Analyticsdata.Clicks.options} series={Analyticsdata.Clicks.series} type="radialBar" width={100} height={120} />
-                                        </div>
-                                        <div className="ms-1">
-                                            <p className="mb-1 text-[#8c9097] dark:text-white/50">Clicks</p>
-                                            <h5 className="font-semibold mb-0 text-[1.25rem]">16,789</h5>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="xxl:col-span-7 xl:col-span-12 col-span-12">
+                        <div className="xl:col-span-12 col-span-12">
                             <div className="box">
                                 <div className="box-header justify-between">
                                     <div className="box-title">
