@@ -258,18 +258,19 @@ const Leads = () => {
         try {
             setDeleteSelectedLoading(true);
             const token = localStorage.getItem('token');
+            console.log("selectedIds",selectedIds);
             
-            await Promise.all(
-                selectedIds.map(id =>
-                    axios.delete(`${Base_url}leads/${id}`, {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    })
-                )
-            );
+            // await Promise.all(
+            //     selectedIds.map(id =>
+            //         axios.delete(`${Base_url}leads/${id}`, {
+            //             headers: {
+            //                 Authorization: `Bearer ${token}`
+            //             }
+            //         })
+            //     )
+            // );
             
-            await fetchRawLeads();
+            // await fetchRawLeads();
             setSelectedIds([]);
         } catch (error) {
             console.error('Error deleting selected leads:', error);
