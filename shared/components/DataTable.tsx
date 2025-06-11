@@ -21,6 +21,16 @@ interface TableRow {
     actions?: TableAction[];
 }
 
+interface FilterOption {
+    value: string;
+    label: string;
+}
+
+interface TabOption {
+    id: string;
+    label: string;
+}
+
 interface DataTableProps {
     headers: TableHeader[];
     data: TableRow[];
@@ -40,6 +50,12 @@ interface DataTableProps {
     onSort?: (key: string, direction: 'asc' | 'desc') => void;
     sortKey?: string;
     sortDirection?: 'asc' | 'desc';
+    filters?: FilterOption[];
+    onFilterChange?: (value: string) => void;
+    selectedFilter?: string;
+    tabs?: TabOption[];
+    activeTab?: string;
+    onTabChange?: (tabId: string) => void;
 }
 
 const DataTable: React.FC<DataTableProps> = ({ 
@@ -60,7 +76,10 @@ const DataTable: React.FC<DataTableProps> = ({
     showCheckbox = false,
     onSort,
     sortKey,
-    sortDirection
+    sortDirection,
+    filters,
+    onFilterChange,
+    selectedFilter
 }) => {
     const handlePageChange = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -107,6 +126,12 @@ const DataTable: React.FC<DataTableProps> = ({
             const newDirection = sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc';
             console.log('Calling onSort with:', { key, newDirection });
             onSort(key, newDirection);
+        }
+    };
+
+    const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (onFilterChange) {
+            onFilterChange(e.target.value);
         }
     };
 
@@ -229,8 +254,26 @@ const DataTable: React.FC<DataTableProps> = ({
                     </select>
                     <span className="text-sm">entries</span>
                 </div>
-                <div className="flex flex-wrap">
-                    <div className="me-3 my-1">
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Filter Dropdown */}
+                    {filters && filters.length > 0 && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm">Filter:</span>
+                            <select
+                                className="ti-form-select form-select-sm"
+                                value={selectedFilter}
+                                onChange={handleFilterChange}
+                            >
+                                {filters.map((filter) => (
+                                    <option key={filter.value} value={filter.value}>
+                                        {filter.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                    {/* Search Box */}
+                    <div className="flex items-center">
                         <input
                             className="ti-form-control form-control-sm" 
                             type="text"

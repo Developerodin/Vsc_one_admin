@@ -79,6 +79,18 @@ const Leads = () => {
         contacted: 0,
         closed: 0
     });
+    const [selectedFilter, setSelectedFilter] = useState('all');
+
+    // Define filters for lead statuses
+    const leadFilters = [
+        { value: 'all', label: 'All Leads' },
+        { value: 'new', label: 'New' },
+        { value: 'contacted', label: 'Contacted' },
+        { value: 'expired', label: 'Expired' },
+        { value: 'converted', label: 'Converted' },
+        { value: 'interested', label: 'Interested' },
+        { value: 'not_interested', label: 'Not Interested' }
+    ];
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -103,24 +115,23 @@ const Leads = () => {
         }
     }, [rawLeads]);
 
-    // Add search effect
-    useEffect(() => {
-        if (searchQuery.trim() === '') {
-            setFilteredLeads(leads);
-            setTotalResults(leads.length);
-            setTotalPages(Math.ceil(leads.length / itemsPerPage));
-        } else {
-            const filtered = leads.filter(lead => {
-                const agentName = lead.agentName.toLowerCase();
-                const searchLower = searchQuery.toLowerCase();
-                return agentName.includes(searchLower);
-            });
-            setFilteredLeads(filtered);
-            setTotalResults(filtered.length);
-            setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    // Filter leads based on selected filter
+    const getFilteredLeads = () => {
+        let filtered = [...leads];
+        if (selectedFilter !== 'all') {
+            filtered = filtered.filter(lead => lead.status === selectedFilter);
         }
+        return filtered;
+    };
+
+    // Update filtered leads when filter changes
+    useEffect(() => {
+        const filtered = getFilteredLeads();
+        setFilteredLeads(filtered);
+        setTotalResults(filtered.length);
+        setTotalPages(Math.ceil(filtered.length / itemsPerPage));
         setCurrentPage(1);
-    }, [searchQuery, leads, itemsPerPage]);
+    }, [selectedFilter, leads, itemsPerPage]);
 
     // Fetch all leads via pagination for stats
     const fetchAllLeadsForStats = async () => {
@@ -510,27 +521,24 @@ const Leads = () => {
                             ) : (
                                 <DataTable 
                                     headers={headers} 
-                                    data={filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+                                    data={filteredLeads}
                                     currentPage={currentPage}
                                     totalPages={totalPages}
-                                    onPageChange={(page) => {
-                                        setCurrentPage(page);
-                                    }}
+                                    onPageChange={setCurrentPage}
                                     totalItems={totalResults}
                                     itemsPerPage={itemsPerPage}
-                                    onItemsPerPageChange={(size) => {
-                                        setItemsPerPage(size);
-                                        setCurrentPage(1);
-                                    }}
+                                    onItemsPerPageChange={setItemsPerPage}
                                     onSearch={handleSearch}
                                     searchQuery={searchQuery}
                                     showCheckbox={true}
                                     selectedIds={selectedIds}
                                     onSelectionChange={setSelectedIds}
-                                    idField="id"
                                     onSort={handleSort}
                                     sortKey={sortKey}
                                     sortDirection={sortDirection}
+                                    filters={leadFilters}
+                                    selectedFilter={selectedFilter}
+                                    onFilterChange={setSelectedFilter}
                                 />
                             )}
                         </div>
