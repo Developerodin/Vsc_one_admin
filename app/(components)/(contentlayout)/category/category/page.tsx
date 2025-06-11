@@ -149,12 +149,12 @@ const Category = () => {
                 {
                   icon: "ri-eye-line",
                   className: "ti-btn-primary",
-                  href: `/subcategory/view?id=${sub.id}`,
+                  href: `/subcategory/subcategory?id=${sub.id}`,
                 },
                 {
                   icon: "ri-edit-line",
                   className: "ti-btn-info",
-                  href: `/subcategory/edit?id=${sub.id}`,
+                  href: `/subcategory?id=${sub.id}`,
                 },
                 {
                   icon: "ri-delete-bin-line",
