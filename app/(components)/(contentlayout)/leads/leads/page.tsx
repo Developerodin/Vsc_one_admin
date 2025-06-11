@@ -495,21 +495,20 @@ const Leads = () => {
                             <div className="flex gap-2">
                                 <button 
                                     type="button" 
-                                    className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                                    className="ti-btn ti-btn-danger"
                                     onClick={handleDeleteSelected}
                                     disabled={selectedIds.length === 0 || deleteSelectedLoading}
                                 >
-                                    <i className="ri-delete-bin-line font-semibold align-middle mr-1"></i>{" "}
+                                    <i className="ri-delete-bin-line me-2"></i>{" "}
                                     {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
                                 </button>
                                 <button 
                                     type="button" 
-                                    className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                                    className="ti-btn ti-btn-primary"
                                     onClick={handleExport}
                                     disabled={selectedIds.length === 0}
                                 >
-                                    <i className="ri-file-excel-line font-semibold align-middle mr-1"></i>{" "}
-                                    Export Selected
+                                    <i className="ri-download-2-line me-2"></i> Export
                                 </button>
                             </div>
                         </div>
