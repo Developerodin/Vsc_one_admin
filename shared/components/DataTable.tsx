@@ -32,6 +32,10 @@ interface DataTableProps {
     onItemsPerPageChange?: (size: number) => void;
     onSearch?: (query: string) => void;
     searchQuery?: string;
+    onSelectionChange?: (selectedIds: string[]) => void;
+    selectedIds?: string[];
+    idField?: string;
+    showCheckbox?: boolean;
 }
 
 const DataTable: React.FC<DataTableProps> = ({ 
@@ -45,7 +49,11 @@ const DataTable: React.FC<DataTableProps> = ({
     itemsPerPage,
     onItemsPerPageChange,
     onSearch,
-    searchQuery = ''
+    searchQuery = '',
+    onSelectionChange,
+    selectedIds = [],
+    idField = 'id',
+    showCheckbox = false
 }) => {
     const handlePageChange = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -63,6 +71,26 @@ const DataTable: React.FC<DataTableProps> = ({
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (onSearch) {
             onSearch(e.target.value);
+        }
+    };
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (onSelectionChange) {
+            if (e.target.checked) {
+                onSelectionChange(data.map(item => item[idField]));
+            } else {
+                onSelectionChange([]);
+            }
+        }
+    };
+
+    const handleSelectRow = (id: string) => {
+        if (onSelectionChange) {
+            if (selectedIds.includes(id)) {
+                onSelectionChange(selectedIds.filter(selectedId => selectedId !== id));
+            } else {
+                onSelectionChange([...selectedIds, id]);
+            }
         }
     };
 
@@ -172,68 +200,88 @@ const DataTable: React.FC<DataTableProps> = ({
                 </div>
                 <div className="flex flex-wrap">
                     <div className="me-3 my-1">
-                                    <input
+                        <input
                             className="ti-form-control form-control-sm" 
-                                        type="text"
+                            type="text"
                             placeholder="Search Here" 
                             value={searchQuery}
                             onChange={handleSearch}
                             aria-label="Search"
-                                    />
-                                </div>
+                        />
+                    </div>
                 </div>
             </div>
             <div className="box-body">
-            <div className="table-responsive">
+                <div className="table-responsive">
                     <table className="table table-hover whitespace-nowrap table-bordered min-w-full">
                         <thead>
                             <tr>
+                                {showCheckbox && (
+                                    <th scope="col" className="text-start">
+                                        <input
+                                            type="checkbox"
+                                            className="form-checkbox"
+                                            checked={selectedIds.length === data.length}
+                                            onChange={handleSelectAll}
+                                        />
+                                    </th>
+                                )}
                                 {headers.map((header) => (
                                     <th key={header.key} scope="col" className={`text-start ${header.className || ''}`}>
                                         {header.label}
                                     </th>
                                 ))}
                             </tr>
-                    </thead>
-                    <tbody>
+                        </thead>
+                        <tbody>
                             {data.map((row, rowIndex) => (
                                 <tr key={rowIndex} className="border-t border-inherit border-solid hover:bg-gray-100 dark:hover:bg-light dark:border-defaultborder/10">
+                                    {showCheckbox && (
+                                        <td className="text-start">
+                                            <input
+                                                type="checkbox"
+                                                className="form-checkbox"
+                                                checked={selectedIds.includes(row[idField])}
+                                                onChange={() => handleSelectRow(row[idField])}
+                                            />
+                                        </td>
+                                    )}
                                     {headers.map((header) => (
                                         <td key={header.key} className={`text-start ${header.className || ''}`}>
                                             {header.key === 'actions' && row.actions ? (
-                                            <div className="hstack flex gap-3 text-[.9375rem]">
+                                                <div className="hstack flex gap-3 text-[.9375rem]">
                                                     {row.actions.map((action, actionIndex) => (
-                                                    action.href ? (
-                                                        <Link
-                                                            key={actionIndex}
-                                                            aria-label="anchor"
-                                                            href={action.href}
-                                                            className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
-                                                            onClick={action.onClick}
-                                                        >
-                                                            <i className={action.icon}></i>
-                                                        </Link>
-                                                    ) : (
-                                                        <button
-                                                            key={actionIndex}
-                                                            className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
-                                                            onClick={action.onClick}
-                                                        >
-                                                            <i className={action.icon}></i>
-                                                        </button>
-                                                    )
-                                                ))}
-                                            </div>
-                                        ) : (
+                                                        action.href ? (
+                                                            <Link
+                                                                key={actionIndex}
+                                                                aria-label="anchor"
+                                                                href={action.href}
+                                                                className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
+                                                                onClick={action.onClick}
+                                                            >
+                                                                <i className={action.icon}></i>
+                                                            </Link>
+                                                        ) : (
+                                                            <button
+                                                                key={actionIndex}
+                                                                className={`ti-btn ti-btn-sm ${action.className} !rounded-full`}
+                                                                onClick={action.onClick}
+                                                            >
+                                                                <i className={action.icon}></i>
+                                                            </button>
+                                                        )
+                                                    ))}
+                                                </div>
+                                            ) : (
                                                 row[header.key]
-                                        )}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div className="box-footer">
                 <div className="sm:flex items-center">
@@ -246,7 +294,7 @@ const DataTable: React.FC<DataTableProps> = ({
                                 {renderPaginationItems()}
                             </ul>
                         </nav>
-                </div>
+                    </div>
                 </div>
             </div>
         </div>

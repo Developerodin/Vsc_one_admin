@@ -13,8 +13,9 @@ import ProtectedRoute from "@/shared/components/ProtectedRoute";
 import * as XLSX from "xlsx";
 
 interface CategoryData {
-  category: string | JSX.Element;
-  subcategoryCount: JSX.Element;
+  id: string;
+  categoryName: string | JSX.Element;
+  subcategoryName: string | JSX.Element;
   createdDate: string;
   status: string;
   actions: Array<{
@@ -38,6 +39,7 @@ const Category = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -82,14 +84,24 @@ const Category = () => {
 
           if (subcategoryResponse.data.length > 0) {
             return subcategoryResponse.data.map((sub: any) => ({
-              category: (
+              id: sub.id,
+              subcategoryName: (
                 <Link
-                  href={`/subcategory/subcategory?categoryId=${category.id}`}
+                  href={`/subcategory/edit?id=${sub.id}`}
                   className="text-black hover:text-primary-dark"
                 >
-                  {category.name || "--"} › {sub.name}
+                  {sub.name || "--"}
                 </Link>
               ),
+              categoryName: (
+                <Link
+                  href={`/category/edit?id=${category.id}`}
+                  className="text-black hover:text-primary-dark"
+                >
+                  {category.name || "--"}
+                </Link>
+              ),
+             
               createdDate: new Date(category.createdAt).toLocaleDateString(
                 "en-GB",
                 {
@@ -103,26 +115,28 @@ const Category = () => {
                 {
                   icon: "ri-eye-line",
                   className: "ti-btn-primary",
-                  href: `/subcategory/subcategory?categoryId=${category.id}`,
+                  href: `/subcategory/view?id=${sub.id}`,
                 },
                 {
                   icon: "ri-edit-line",
                   className: "ti-btn-info",
-                  href: `/category/edit?id=${category.id}`,
+                  href: `/subcategory/edit?id=${sub.id}`,
                 },
                 {
                   icon: "ri-delete-bin-line",
                   className: "ti-btn-danger",
-                  onClick: () => handleDelete(category.id),
+                  onClick: () => handleDelete(sub.id),
                 },
               ],
             }));
           } else {
             return [
               {
-                category: (
+                id: category.id,
+                subcategoryName: "--",
+                categoryName: (
                   <Link
-                    href={`/subcategory/subcategory?categoryId=${category.id}`}
+                    href={`/category/edit?id=${category.id}`}
                     className="text-black hover:text-primary-dark"
                   >
                     {category.name || "--"}
@@ -141,7 +155,7 @@ const Category = () => {
                   {
                     icon: "ri-eye-line",
                     className: "ti-btn-primary",
-                    href: "#",
+                    href: `/category/view?id=${category.id}`,
                   },
                   {
                     icon: "ri-edit-line",
@@ -269,40 +283,41 @@ const Category = () => {
   ];
 
   const headers = [
-    { key: "category", label: "Category Name", sortable: true },
+    
+    { key: "subcategoryName", label: "Category Name", sortable: true },
+    { key: "categoryName", label: "Parent Category", sortable: true },
     { key: "createdDate", label: "Created Date", sortable: false },
     { key: "status", label: "Status", sortable: false },
     { key: "actions", label: "Actions", sortable: false },
   ];
 
   const handleExport = () => {
-    // Create a new array without the actions column
-    const exportData = categories.map((category) => {
-      // Get the category name from the Link component
-      const categoryElement = category.category as React.ReactElement;
-      const categoryName =
-        typeof categoryElement.props.children === "string"
-          ? categoryElement.props.children
-          : Array.isArray(categoryElement.props.children)
-          ? categoryElement.props.children.join(" › ")
-          : "";
+    // Filter data based on selected IDs
+    const dataToExport = selectedIds.length > 0
+      ? categories.filter(category => selectedIds.includes(category.id))
+      : categories;
 
-      return {
-        "Category Name": categoryName,
-        "Created Date": category.createdDate,
-        Status: category.status,
-      };
-    });
+    // Create a new array without the actions column
+    const exportData = dataToExport.map(category => ({
+      'Category Name': typeof category.categoryName === 'object' ? 
+        (category.categoryName as React.ReactElement).props.children : 
+        category.categoryName,
+      'Subcategory Name': typeof category.subcategoryName === 'object' ? 
+        (category.subcategoryName as React.ReactElement).props.children : 
+        category.subcategoryName,
+      'Created Date': category.createdDate,
+      'Status': category.status
+    }));
 
     // Create a worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
 
     // Create a workbook
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Categories");
+    XLSX.utils.book_append_sheet(wb, ws, 'Categories');
 
     // Generate Excel file
-    XLSX.writeFile(wb, "categories.xlsx");
+    XLSX.writeFile(wb, 'categories.xlsx');
   };
 
   return (
@@ -323,9 +338,10 @@ const Category = () => {
                   type="button"
                   className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
                   onClick={handleExport}
+                  disabled={selectedIds.length === 0}
                 >
                   <i className="ri-file-excel-line font-semibold align-middle mr-1"></i>{" "}
-                  Export
+                  Export Selected
                 </button>
                 <button
                   type="button"
@@ -526,8 +542,12 @@ const Category = () => {
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={(size) => {
                   setItemsPerPage(size);
-                  setCurrentPage(1); // Reset to first page when changing page size
+                  setCurrentPage(1);
                 }}
+                showCheckbox={true}
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
+                idField="id"
               />
             </div>
           </div>
