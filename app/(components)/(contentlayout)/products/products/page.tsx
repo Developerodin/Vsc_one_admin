@@ -68,6 +68,10 @@ const Products = () => {
         documents: [],
         images: []
     });
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
+    const [sortKey, setSortKey] = useState<string>('');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
         fetchProducts();
@@ -128,6 +132,7 @@ const Products = () => {
                 }) || ['--'];
 
                 return {
+                    id: product.id,
                     srNo: index + 1,
                     name: product.name || '--',
                     type: product.type || '--',
@@ -297,9 +302,79 @@ const Products = () => {
         }
     };
 
+    const handleDeleteSelected = async () => {
+        if (selectedIds.length === 0) return;
+        
+        try {
+            setDeleteSelectedLoading(true);
+            const token = localStorage.getItem('token');
+            console.log("selectedIds",selectedIds);
+            
+            // await Promise.all(
+            //     selectedIds.map(id =>
+            //         axios.delete(`${Base_url}products/${id}`, {
+            //             headers: {
+            //                 Authorization: `Bearer ${token}`
+            //             }
+            //         })
+            //     )
+            // );
+            
+            // await fetchProducts();
+            setSelectedIds([]);
+        } catch (error) {
+            console.error('Error deleting selected products:', error);
+        } finally {
+            setDeleteSelectedLoading(false);
+        }
+    };
+
+    const handleSort = (key: string, direction: 'asc' | 'desc') => {
+        console.log('Sorting:', { key, direction });
+        setSortKey(key);
+        setSortDirection(direction);
+        
+        // Sort the data on the frontend
+        const sortedData = [...filteredProducts].sort((a, b) => {
+            let valueA = a[key];
+            let valueB = b[key];
+
+            // Handle JSX elements
+            if (React.isValidElement(valueA)) {
+                valueA = valueA.props.children;
+            }
+            if (React.isValidElement(valueB)) {
+                valueB = valueB.props.children;
+            }
+
+            // Handle string comparison
+            if (typeof valueA === 'string' && typeof valueB === 'string') {
+                return direction === 'asc' 
+                    ? valueA.localeCompare(valueB)
+                    : valueB.localeCompare(valueA);
+            }
+
+            // Handle number comparison
+            if (typeof valueA === 'number' && typeof valueB === 'number') {
+                return direction === 'asc' 
+                    ? valueA - valueB
+                    : valueB - valueA;
+            }
+
+            return 0;
+        });
+
+        setFilteredProducts(sortedData);
+    };
+
     const handleExport = () => {
+        // Filter data based on selected IDs
+        const dataToExport = selectedIds.length > 0
+            ? products.filter(product => selectedIds.includes(product.id))
+            : products;
+
         // Create a new array without the actions column
-        const exportData = products.map(product => ({
+        const exportData = dataToExport.map(product => ({
             'Name': product.name,
             'Type': product.type,
             'Category': product.category,
@@ -335,13 +410,13 @@ const Products = () => {
     ];
 
     const headers = [
-        { key: 'name', label: 'Name' ,sortable: false},
-        { key: 'type', label: 'Type' ,sortable: false},
-        { key: 'category', label: 'Category' ,sortable: false},
-        { key: 'commission', label: 'Commission' ,sortable: false},
-        { key: 'duration', label: 'Duration' ,sortable: false},
-        { key: 'status', label: 'Status' ,sortable: false},
-        { key: 'actions', label: 'Actions' ,sortable: false}
+        { key: 'name', label: 'Name', sortable: true },
+        { key: 'type', label: 'Type', sortable: true },
+        { key: 'category', label: 'Category', sortable: true },
+        { key: 'commission', label: 'Commission', sortable: true },
+        { key: 'duration', label: 'Duration', sortable: true },
+        { key: 'status', label: 'Status', sortable: true },
+        { key: 'actions', label: 'Actions', sortable: false }
     ];
 
     return (
@@ -357,9 +432,20 @@ const Products = () => {
                                 <button 
                                     type="button" 
                                     className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
-                                    onClick={handleExport}
+                                    onClick={handleDeleteSelected}
+                                    disabled={selectedIds.length === 0 || deleteSelectedLoading}
                                 >
-                                    <i className="ri-file-excel-line font-semibold align-middle mr-1"></i> Export
+                                    <i className="ri-delete-bin-line font-semibold align-middle mr-1"></i>{" "}
+                                    {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                                    onClick={handleExport}
+                                    disabled={selectedIds.length === 0}
+                                >
+                                    <i className="ri-file-excel-line font-semibold align-middle mr-1"></i>{" "}
+                                    Export Selected
                                 </button>
                                 <button 
                                     type="button" 
@@ -654,10 +740,17 @@ const Products = () => {
                                 itemsPerPage={itemsPerPage}
                                 onItemsPerPageChange={(size) => {
                                     setItemsPerPage(size);
-                                    setCurrentPage(1); // Reset to first page when changing page size
+                                    setCurrentPage(1);
                                 }}
                                 onSearch={handleSearch}
                                 searchQuery={searchQuery}
+                                showCheckbox={true}
+                                selectedIds={selectedIds}
+                                onSelectionChange={setSelectedIds}
+                                idField="id"
+                                onSort={handleSort}
+                                sortKey={sortKey}
+                                sortDirection={sortDirection}
                             />
                         </div>
                     </div>

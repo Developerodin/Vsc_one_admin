@@ -24,6 +24,10 @@ const Users = () => {
   const [totalResults, setTotalResults] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     fetchUsers();
@@ -163,18 +167,101 @@ const Users = () => {
     setShowDeleteModal(true);
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    
+    try {
+      setDeleteSelectedLoading(true);
+      const token = localStorage.getItem("token");
+      console.log("selectedIds",selectedIds);
+      
+      // await Promise.all(
+      //   selectedIds.map(id =>
+      //     axios.delete(`${Base_url}users/${id}`, {
+      //       headers: {
+      //         Authorization: `Bearer ${token}`
+      //       }
+      //     })
+      //   )
+      // );
+      
+      // await fetchUsers();
+      setSelectedIds([]);
+    } catch (error) {
+      console.error("Error deleting selected users:", error);
+    } finally {
+      setDeleteSelectedLoading(false);
+    }
+  };
+
+  const handleSort = (key: string, direction: 'asc' | 'desc') => {
+    setSortKey(key);
+    setSortDirection(direction);
+    
+    const sortedData = [...filteredUsers].sort((a, b) => {
+      let valueA = a[key];
+      let valueB = b[key];
+
+      // Handle JSX elements (for name and contact)
+      if (React.isValidElement(valueA)) {
+        const element = valueA as React.ReactElement;
+        valueA = element.props.children[0].props.children;
+      }
+      if (React.isValidElement(valueB)) {
+        const element = valueB as React.ReactElement;
+        valueB = element.props.children[0].props.children;
+      }
+
+      // Handle date strings
+      if (key === 'createdDate') {
+        valueA = new Date(valueA).getTime();
+        valueB = new Date(valueB).getTime();
+      }
+
+      // Handle string comparison
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return direction === 'asc' 
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      }
+
+      // Handle number comparison
+      if (typeof valueA === 'number' && typeof valueB === 'number') {
+        return direction === 'asc' 
+          ? valueA - valueB
+          : valueB - valueA;
+      }
+
+      return 0;
+    });
+
+    setFilteredUsers(sortedData);
+  };
+
   const handleExport = () => {
-    const exportData = users.map(user => ({
+    // Filter data based on selected IDs
+    const dataToExport = selectedIds.length > 0
+      ? users.filter(user => selectedIds.includes(user.userId))
+      : users;
+
+    // Create a new array without the actions column
+    const exportData = dataToExport.map(user => ({
       'Name': user.name.props.children[0].props.children,
       'Mobile Number': user.contact.props.children[0].props.children,
       'Email': user.contact.props.children[1].props.children,
       'Total Commission': user.totalCommission,
-      'Address': user.address
+      'Address': user.address,
+      'Created Date': user.createdDate
     }));
 
+    // Create a worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Create a workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Users');
+
+    // Generate Excel file
     XLSX.writeFile(wb, 'users.xlsx');
   };
 
@@ -183,13 +270,13 @@ const Users = () => {
   };
 
   const headers = [
-    { key: "profile", label: "Profile" },
-    { key: "name", label: "Name" },
-    { key: "contact", label: "Contact" },
-    { key: "totalCommission", label: "Total Commission" },
-    { key: "address", label: "Address" },
-    { key: "createdDate", label: "Created Date" },
-    { key: "actions", label: "Actions" },
+    { key: "profile", label: "Profile", sortable: false },
+    { key: "name", label: "Name", sortable: true },
+    { key: "contact", label: "Contact", sortable: false },
+    { key: "totalCommission", label: "Total Commission", sortable: true },
+    { key: "address", label: "Address", sortable: false },
+    { key: "createdDate", label: "Created Date", sortable: true },
+    { key: "actions", label: "Actions", sortable: false },
   ];
 
   return (
@@ -205,9 +292,20 @@ const Users = () => {
                 <button 
                   type="button" 
                   className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
-                  onClick={handleExport}
+                  onClick={handleDeleteSelected}
+                  disabled={selectedIds.length === 0 || deleteSelectedLoading}
                 >
-                  <i className="ri-file-excel-line font-semibold align-middle mr-1"></i> Export
+                  <i className="ri-delete-bin-line font-semibold align-middle mr-1"></i>{" "}
+                  {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
+                </button>
+                <button 
+                  type="button" 
+                  className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                  onClick={handleExport}
+                  disabled={selectedIds.length === 0}
+                >
+                  <i className="ri-file-excel-line font-semibold align-middle mr-1"></i>{" "}
+                  Export Selected
                 </button>
                 <button
                   type="button"
@@ -236,10 +334,17 @@ const Users = () => {
                   itemsPerPage={itemsPerPage}
                   onItemsPerPageChange={(size) => {
                     setItemsPerPage(size);
-                    setCurrentPage(1); // Reset to first page when changing page size
+                    setCurrentPage(1);
                   }}
                   onSearch={handleSearch}
                   searchQuery={searchQuery}
+                  showCheckbox={true}
+                  selectedIds={selectedIds}
+                  onSelectionChange={setSelectedIds}
+                  idField="userId"
+                  onSort={handleSort}
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
                 />
               )}
             </div>

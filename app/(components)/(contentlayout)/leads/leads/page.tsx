@@ -27,6 +27,7 @@ interface Lead {
         href?: string;
         onClick?: () => void;
     }>;
+    [key: string]: any; // Add index signature to allow string indexing
 }
 
 interface RawLead {
@@ -58,6 +59,10 @@ const Leads = () => {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
+    const [sortKey, setSortKey] = useState<string>('');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -247,27 +252,89 @@ const Leads = () => {
         { value: 'msme-loan', label: 'MSME Support' }
     ];
 
-    const headers = [
-        { key: 'agentName', label: 'Agent Name' , sortable: true},
-        { key: 'status', label: 'Status' , sortable: false},
-        { key: 'product', label: 'Product' , sortable: false},
-        { key: 'leadTracking', label: 'Lead Tracking' , sortable: false},
-        { key: 'actions', label: 'Actions' , sortable: false}
-    ];
+    const handleDeleteSelected = async () => {
+        if (selectedIds.length === 0) return;
+        
+        try {
+            setDeleteSelectedLoading(true);
+            const token = localStorage.getItem('token');
+            
+            await Promise.all(
+                selectedIds.map(id =>
+                    axios.delete(`${Base_url}leads/${id}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    })
+                )
+            );
+            
+            await fetchRawLeads();
+            setSelectedIds([]);
+        } catch (error) {
+            console.error('Error deleting selected leads:', error);
+            setError('Failed to delete selected leads');
+        } finally {
+            setDeleteSelectedLoading(false);
+        }
+    };
+
+    const handleSort = (key: string, direction: 'asc' | 'desc') => {
+        setSortKey(key);
+        setSortDirection(direction);
+        
+        const sortedData = [...filteredLeads].sort((a, b) => {
+            let valueA = a[key];
+            let valueB = b[key];
+
+            // Handle JSX elements (for leadTracking)
+            if (React.isValidElement(valueA)) {
+                const element = valueA as React.ReactElement;
+                valueA = element.props.children;
+            }
+            if (React.isValidElement(valueB)) {
+                const element = valueB as React.ReactElement;
+                valueB = element.props.children;
+            }
+
+            // Handle string comparison
+            if (typeof valueA === 'string' && typeof valueB === 'string') {
+                return direction === 'asc' 
+                    ? valueA.localeCompare(valueB)
+                    : valueB.localeCompare(valueA);
+            }
+
+            // Handle number comparison
+            if (typeof valueA === 'number' && typeof valueB === 'number') {
+                return direction === 'asc' 
+                    ? valueA - valueB
+                    : valueB - valueA;
+            }
+
+            return 0;
+        });
+
+        setFilteredLeads(sortedData);
+    };
 
     const handleExport = () => {
-        // Prepare data for export
-        const exportData = leads.map(lead => ({
+        // Filter data based on selected IDs
+        const dataToExport = selectedIds.length > 0
+            ? leads.filter(lead => selectedIds.includes(lead.id))
+            : leads;
+
+        // Create a new array without the actions column
+        const exportData = dataToExport.map(lead => ({
             'Sr No': lead.srNo,
             'Agent Name': lead.agentName,
             'Status': lead.status,
             'Product': lead.product
         }));
 
-        // Create worksheet
+        // Create a worksheet
         const ws = XLSX.utils.json_to_sheet(exportData);
 
-        // Create workbook
+        // Create a workbook
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Leads');
 
@@ -279,6 +346,14 @@ const Leads = () => {
         setSearchQuery(query);
     };
 
+    const headers = [
+        { key: 'agentName', label: 'Agent Name', sortable: true },
+        { key: 'status', label: 'Status', sortable: false },
+        { key: 'product', label: 'Product', sortable: true },
+        { key: 'leadTracking', label: 'Lead Tracking', sortable: false },
+        { key: 'actions', label: 'Actions', sortable: false }
+    ];
+
     return (
         <Fragment>
             <Seo title={"Leads"} />
@@ -289,16 +364,24 @@ const Leads = () => {
                         <div className="box-header">
                             <h5 className="box-title">Leads List</h5>
                             <div className="flex gap-2">
-                            <button 
+                                <button 
+                                    type="button" 
+                                    className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                                    onClick={handleDeleteSelected}
+                                    disabled={selectedIds.length === 0 || deleteSelectedLoading}
+                                >
+                                    <i className="ri-delete-bin-line font-semibold align-middle mr-1"></i>{" "}
+                                    {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
+                                </button>
+                                <button 
                                     type="button" 
                                     className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
                                     onClick={handleExport}
+                                    disabled={selectedIds.length === 0}
                                 >
-                                    <i className="ri-file-excel-line font-semibold align-middle mr-1"></i> Export
+                                    <i className="ri-file-excel-line font-semibold align-middle mr-1"></i>{" "}
+                                    Export Selected
                                 </button>
-                                {/* <Link href="/leads/create" className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
-                                    <i className="ri-add-line font-semibold align-middle"></i> Create Lead
-                                </Link> */}
                             </div>
                         </div>
                         <div className="box-body">
@@ -323,6 +406,13 @@ const Leads = () => {
                                     }}
                                     onSearch={handleSearch}
                                     searchQuery={searchQuery}
+                                    showCheckbox={true}
+                                    selectedIds={selectedIds}
+                                    onSelectionChange={setSelectedIds}
+                                    idField="id"
+                                    onSort={handleSort}
+                                    sortKey={sortKey}
+                                    sortDirection={sortDirection}
                                 />
                             )}
                         </div>

@@ -50,6 +50,9 @@ const Category = () => {
       description: "",
     },
   });
+  const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const tabs = [
     { name: "General Information", icon: "ri-information-line" },
@@ -64,12 +67,14 @@ const Category = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
-      console.log("token", token);
-      const response = await axios.get(`${Base_url}categories?limit=${itemsPerPage}&page=${currentPage}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get(
+        `${Base_url}categories?limit=${itemsPerPage}&page=${currentPage}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const formattedData = await Promise.all(
         response.data.results.flatMap(async (category: any) => {
@@ -174,7 +179,14 @@ const Category = () => {
         })
       );
 
-      setCategories(formattedData.flat());
+      const flatData = formattedData.flat();
+      setCategories(flatData);
+      
+      // Apply sorting if sortKey is set
+      if (sortKey) {
+        handleSort(sortKey, sortDirection);
+      }
+
       setTotalPages(response.data.totalPages);
       setTotalResults(response.data.totalResults);
     } catch (error) {
@@ -272,6 +284,64 @@ const Category = () => {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    
+    try {
+      setDeleteSelectedLoading(true);
+      
+      console.log("selectedIds", selectedIds);
+    } catch (error) {
+      console.error("Error deleting selected categories:", error);
+    } finally {
+      setDeleteSelectedLoading(false);
+    }
+  };
+
+  const handleSort = (key: string, direction: 'asc' | 'desc') => {
+    console.log('Sorting:', { key, direction });
+    setSortKey(key);
+    setSortDirection(direction);
+    
+    // Sort the data on the frontend
+    const sortedData = [...categories].sort((a, b) => {
+      let valueA = a[key];
+      let valueB = b[key];
+
+      // Handle JSX elements (for categoryName and subcategoryName)
+      if (React.isValidElement(valueA)) {
+        valueA = valueA.props.children;
+      }
+      if (React.isValidElement(valueB)) {
+        valueB = valueB.props.children;
+      }
+
+      // Handle date strings
+      if (key === 'createdDate') {
+        valueA = new Date(valueA).getTime();
+        valueB = new Date(valueB).getTime();
+      }
+
+      // Handle string comparison
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return direction === 'asc' 
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      }
+
+      // Handle number comparison
+      if (typeof valueA === 'number' && typeof valueB === 'number') {
+        return direction === 'asc' 
+          ? valueA - valueB
+          : valueB - valueA;
+      }
+
+      return 0;
+    });
+
+    setCategories(sortedData);
+  };
+
   const StatusOptions = [
     { value: "active", label: "Active" },
     { value: "inactive", label: "Inactive" },
@@ -283,10 +353,9 @@ const Category = () => {
   ];
 
   const headers = [
-    
     { key: "subcategoryName", label: "Category Name", sortable: true },
     { key: "categoryName", label: "Parent Category", sortable: true },
-    { key: "createdDate", label: "Created Date", sortable: false },
+    { key: "createdDate", label: "Created Date", sortable: true },
     { key: "status", label: "Status", sortable: false },
     { key: "actions", label: "Actions", sortable: false },
   ];
@@ -334,6 +403,15 @@ const Category = () => {
             <div className="box-header">
               <h5 className="box-title">Category List</h5>
               <div className="flex space-x-2">
+                <button
+                  type="button"
+                  className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                  onClick={handleDeleteSelected}
+                  disabled={selectedIds.length === 0 || deleteSelectedLoading}
+                >
+                  <i className="ri-delete-bin-line font-semibold align-middle mr-1"></i>{" "}
+                  {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
+                </button>
                 <button
                   type="button"
                   className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
@@ -548,6 +626,9 @@ const Category = () => {
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
                 idField="id"
+                onSort={handleSort}
+                sortKey={sortKey}
+                sortDirection={sortDirection}
               />
             </div>
           </div>

@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx'
 import ProtectedRoute from "@/shared/components/ProtectedRoute";
 
 interface ProductData {
+    id: string;
     srNo: number;
     name: string;
     category: string;
@@ -21,6 +22,7 @@ interface ProductData {
         href?: string;
         onClick?: () => void;
     }>;
+    [key: string]: any; // Add index signature to allow string indexing
 }
 
 const LeadsFields = () => {
@@ -36,6 +38,10 @@ const LeadsFields = () => {
     const [totalResults, setTotalResults] = useState(0);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
+    const [sortKey, setSortKey] = useState<string>('');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
         fetchProducts();
@@ -76,6 +82,7 @@ const LeadsFields = () => {
             
             response.data.results.forEach((leadField: any, index: number) => {
                 formattedData.push({
+                    id: leadField.id,
                     srNo: index + 1,
                     name: leadField.product?.name || 'Unknown Product',
                     category: leadField.category?.name || 'Unknown Category',
@@ -135,9 +142,68 @@ const LeadsFields = () => {
         }
     };
 
+    const handleDeleteSelected = async () => {
+        if (selectedIds.length === 0) return;
+        
+        try {
+            setDeleteSelectedLoading(true);
+            const token = localStorage.getItem('token');
+            
+            await Promise.all(
+                selectedIds.map(id =>
+                    axios.delete(`${Base_url}leadsfields/${id}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    })
+                )
+            );
+            
+            await fetchProducts();
+            setSelectedIds([]);
+        } catch (error) {
+            console.error('Error deleting selected lead fields:', error);
+        } finally {
+            setDeleteSelectedLoading(false);
+        }
+    };
+
+    const handleSort = (key: string, direction: 'asc' | 'desc') => {
+        setSortKey(key);
+        setSortDirection(direction);
+        
+        const sortedData = [...filteredProducts].sort((a, b) => {
+            let valueA = a[key];
+            let valueB = b[key];
+
+            // Handle string comparison
+            if (typeof valueA === 'string' && typeof valueB === 'string') {
+                return direction === 'asc' 
+                    ? valueA.localeCompare(valueB)
+                    : valueB.localeCompare(valueA);
+            }
+
+            // Handle number comparison
+            if (typeof valueA === 'number' && typeof valueB === 'number') {
+                return direction === 'asc' 
+                    ? valueA - valueB
+                    : valueB - valueA;
+            }
+
+            return 0;
+        });
+
+        setFilteredProducts(sortedData);
+    };
+
     const handleExport = () => {
+        // Filter data based on selected IDs
+        const dataToExport = selectedIds.length > 0
+            ? products.filter(product => selectedIds.includes(product.id))
+            : products;
+
         // Create a new array without the actions column
-        const exportData = products.map(product => ({
+        const exportData = dataToExport.map(product => ({
             'Sr. No.': product.srNo,
             'Name': product.name,
             'Category': product.category,
@@ -156,10 +222,10 @@ const LeadsFields = () => {
     };
 
     const headers = [
-        { key: 'name', label: 'Name' ,sortable: false},
-        { key: 'category', label: 'Category' ,sortable: false},
-        { key: 'availableFields', label: 'Available Fields' ,sortable: false},
-        { key: 'actions', label: 'Actions' ,sortable: false}
+        { key: 'name', label: 'Name', sortable: true },
+        { key: 'category', label: 'Category', sortable: true },
+        { key: 'availableFields', label: 'Available Fields', sortable: true },
+        { key: 'actions', label: 'Actions', sortable: false }
     ];
 
     return (
@@ -175,9 +241,20 @@ const LeadsFields = () => {
                                 <button 
                                     type="button" 
                                     className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
-                                    onClick={handleExport}
+                                    onClick={handleDeleteSelected}
+                                    disabled={selectedIds.length === 0 || deleteSelectedLoading}
                                 >
-                                    <i className="ri-file-excel-line font-semibold align-middle mr-1"></i> Export
+                                    <i className="ri-delete-bin-line font-semibold align-middle mr-1"></i>{" "}
+                                    {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
+                                    onClick={handleExport}
+                                    disabled={selectedIds.length === 0}
+                                >
+                                    <i className="ri-file-excel-line font-semibold align-middle mr-1"></i>{" "}
+                                    Export Selected
                                 </button>
                                 <button 
                                     type="button" 
@@ -205,6 +282,13 @@ const LeadsFields = () => {
                                 }}
                                 onSearch={handleSearch}
                                 searchQuery={searchQuery}
+                                showCheckbox={true}
+                                selectedIds={selectedIds}
+                                onSelectionChange={setSelectedIds}
+                                idField="id"
+                                onSort={handleSort}
+                                sortKey={sortKey}
+                                sortDirection={sortDirection}
                             />
                         </div>
                     </div>

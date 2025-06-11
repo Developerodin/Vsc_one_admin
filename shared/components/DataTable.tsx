@@ -6,6 +6,7 @@ interface TableHeader {
     key: string;
     label: string;
     className?: string;
+    sortable?: boolean;
 }
 
 interface TableAction {
@@ -36,6 +37,9 @@ interface DataTableProps {
     selectedIds?: string[];
     idField?: string;
     showCheckbox?: boolean;
+    onSort?: (key: string, direction: 'asc' | 'desc') => void;
+    sortKey?: string;
+    sortDirection?: 'asc' | 'desc';
 }
 
 const DataTable: React.FC<DataTableProps> = ({ 
@@ -53,7 +57,10 @@ const DataTable: React.FC<DataTableProps> = ({
     onSelectionChange,
     selectedIds = [],
     idField = 'id',
-    showCheckbox = false
+    showCheckbox = false,
+    onSort,
+    sortKey,
+    sortDirection
 }) => {
     const handlePageChange = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -92,6 +99,30 @@ const DataTable: React.FC<DataTableProps> = ({
                 onSelectionChange([...selectedIds, id]);
             }
         }
+    };
+
+    const handleSort = (key: string) => {
+        console.log('DataTable handleSort called:', { key, currentSortKey: sortKey, currentDirection: sortDirection });
+        if (onSort) {
+            const newDirection = sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc';
+            console.log('Calling onSort with:', { key, newDirection });
+            onSort(key, newDirection);
+        }
+    };
+
+    const renderSortIcon = (key: string) => {
+        const header = headers.find(h => h.key === key);
+        console.log('Rendering sort icon for:', { key, isSortable: header?.sortable, currentSortKey: sortKey, currentDirection: sortDirection });
+        
+        if (!header?.sortable) return null;
+        
+        if (sortKey !== key) {
+            return <i className="ri-arrow-up-down-line ms-1"></i>;
+        }
+        
+        return sortDirection === 'asc' ? 
+            <i className="ri-arrow-up-line ms-1"></i> : 
+            <i className="ri-arrow-down-line ms-1"></i>;
     };
 
     const renderPaginationItems = () => {
@@ -227,8 +258,16 @@ const DataTable: React.FC<DataTableProps> = ({
                                     </th>
                                 )}
                                 {headers.map((header) => (
-                                    <th key={header.key} scope="col" className={`text-start ${header.className || ''}`}>
-                                        {header.label}
+                                    <th 
+                                        key={header.key} 
+                                        scope="col" 
+                                        className={`text-start ${header.className || ''} ${header.sortable ? 'cursor-pointer' : ''}`}
+                                        onClick={() => header.sortable && handleSort(header.key)}
+                                    >
+                                        <div className="flex items-center">
+                                            {header.label}
+                                            {renderSortIcon(header.key)}
+                                        </div>
                                     </th>
                                 ))}
                             </tr>
