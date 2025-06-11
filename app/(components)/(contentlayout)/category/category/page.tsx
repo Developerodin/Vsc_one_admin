@@ -14,8 +14,8 @@ import * as XLSX from "xlsx";
 
 interface CategoryData {
   id: string;
-  categoryName: string | JSX.Element;
-  subcategoryName: string | JSX.Element;
+  categoryName: string | React.ReactElement;
+  subcategoryName: string | React.ReactElement;
   createdDate: string;
   status: string;
   actions: Array<{
@@ -23,17 +23,18 @@ interface CategoryData {
     className: string;
     href: string;
   }>;
+  [key: string]: any; // Add index signature
 }
 
 const Category = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<CategoryData[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null
-  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -63,6 +64,34 @@ const Category = () => {
   useEffect(() => {
     fetchCategories();
   }, [currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredProducts(categories);
+      setTotalResults(categories.length);
+      setTotalPages(Math.ceil(categories.length / itemsPerPage));
+    } else {
+      const filtered = categories.filter(category => {
+        // Extract text content from JSX elements
+        const categoryName = React.isValidElement(category.categoryName) 
+          ? (category.categoryName as React.ReactElement).props.children 
+          : category.categoryName;
+        const subcategoryName = React.isValidElement(category.subcategoryName)
+          ? (category.subcategoryName as React.ReactElement).props.children
+          : category.subcategoryName;
+
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          String(categoryName).toLowerCase().includes(searchLower) ||
+          String(subcategoryName).toLowerCase().includes(searchLower)
+        );
+      });
+      setFilteredProducts(filtered);
+      setTotalResults(filtered.length);
+      setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    }
+    setCurrentPage(1);
+  }, [searchQuery, categories, itemsPerPage]);
 
   const fetchCategories = async () => {
     try {
@@ -310,10 +339,10 @@ const Category = () => {
 
       // Handle JSX elements (for categoryName and subcategoryName)
       if (React.isValidElement(valueA)) {
-        valueA = valueA.props.children;
+        valueA = (valueA as React.ReactElement).props.children;
       }
       if (React.isValidElement(valueB)) {
-        valueB = valueB.props.children;
+        valueB = (valueB as React.ReactElement).props.children;
       }
 
       // Handle date strings
@@ -351,6 +380,10 @@ const Category = () => {
     { value: "insurance", label: "Insurance" },
     { value: "banking", label: "Banking" },
   ];
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
 
   const headers = [
     { key: "subcategoryName", label: "Category Name", sortable: true },
@@ -610,7 +643,7 @@ const Category = () => {
             <div className="box-body">
               <DataTable 
                 headers={headers} 
-                data={categories}
+                data={filteredProducts}
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={(page) => {
@@ -629,6 +662,9 @@ const Category = () => {
                 onSort={handleSort}
                 sortKey={sortKey}
                 sortDirection={sortDirection}
+                onSearch={handleSearch}
+                searchQuery={searchQuery}
+                searchPlaceholder="Search by category or subcategory name..."
               />
             </div>
           </div>

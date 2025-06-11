@@ -138,7 +138,6 @@ const Products = () => {
                     type: product.type || '--',
                     category: categoryNames.join(', '),
                     commission: `${product.commission?.percentage || 0}%`,
-                    duration: product.duration || '--',
                     status: product.status || '--',
                     actions: [
                         {
@@ -379,7 +378,6 @@ const Products = () => {
             'Type': product.type,
             'Category': product.category,
             'Commission': product.commission,
-            'Duration': product.duration,
             'Status': product.status
         }));
 
@@ -414,7 +412,6 @@ const Products = () => {
         { key: 'type', label: 'Type', sortable: true },
         { key: 'category', label: 'Category', sortable: true },
         { key: 'commission', label: 'Commission', sortable: true },
-        { key: 'duration', label: 'Duration', sortable: true },
         { key: 'status', label: 'Status', sortable: true },
         { key: 'actions', label: 'Actions', sortable: false }
     ];
