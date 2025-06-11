@@ -42,6 +42,14 @@ interface RawLead {
     // ... other fields
 }
 
+interface LeadStats {
+    total: number;
+    new: number;
+    interested: number;
+    contacted: number;
+    closed: number;
+}
+
 const Leads = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -63,6 +71,14 @@ const Leads = () => {
     const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
     const [sortKey, setSortKey] = useState<string>('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [allLeads, setAllLeads] = useState<RawLead[]>([]);
+    const [leadStats, setLeadStats] = useState<LeadStats>({
+        total: 0,
+        new: 0,
+        interested: 0,
+        contacted: 0,
+        closed: 0
+    });
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -105,6 +121,47 @@ const Leads = () => {
         }
         setCurrentPage(1);
     }, [searchQuery, leads, itemsPerPage]);
+
+    // Fetch all leads via pagination for stats
+    const fetchAllLeadsForStats = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            let page = 1;
+            let allResults: RawLead[] = [];
+            let hasMore = true;
+            while (hasMore) {
+                const response = await axios.get(`${Base_url}leads?limit=100&page=${page}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const results = response.data.results || [];
+                allResults = [...allResults, ...results];
+                if (results.length < 100) {
+                    hasMore = false;
+                } else {
+                    page++;
+                }
+            }
+            setAllLeads(allResults);
+        } catch (error) {
+            console.error('Error fetching all leads for stats:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchAllLeadsForStats();
+    }, []);
+
+    // Calculate lead stats from allLeads
+    useEffect(() => {
+        const stats = {
+            total: allLeads.length,
+            new: allLeads.filter(lead => lead.status === 'new').length,
+            interested: allLeads.filter(lead => lead.status === 'interested').length,
+            contacted: allLeads.filter(lead => lead.status === 'contacted').length,
+            closed: allLeads.filter(lead => lead.status === 'closed').length
+        };
+        setLeadStats(stats);
+    }, [allLeads]);
 
     const fetchUsers = async () => {
         try {
@@ -359,6 +416,66 @@ const Leads = () => {
         <Fragment>
             <Seo title={"Leads"} />
             <Pageheader currentpage="Leads" activepage="Leads" mainpage="Leads" />
+            
+            {/* Summary Cards - 5 in a row, small size */}
+            <div className="grid grid-cols-12 gap-4 mb-6">
+                <div className="col-span-12 sm:col-span-3 md:col-span-2">
+                    <div className="box bg-primary text-white p-3 rounded-md">
+                        <div className="flex items-center gap-2">
+                            <div>
+                                <div className="text-xs font-medium">Total Leads</div>
+                                <div className="text-lg font-bold">{leadStats.total}</div>
+                            </div>
+                            <i className="ri-user-3-line text-2xl ml-auto"></i>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-span-12 sm:col-span-3 md:col-span-2">
+                    <div className="box bg-success text-white p-3 rounded-md">
+                        <div className="flex items-center gap-2">
+                            <div>
+                                <div className="text-xs font-medium">New Leads</div>
+                                <div className="text-lg font-bold">{leadStats.new}</div>
+                            </div>
+                            <i className="ri-user-add-line text-2xl ml-auto"></i>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-span-12 sm:col-span-3 md:col-span-2">
+                    <div className="box bg-info text-white p-3 rounded-md">
+                        <div className="flex items-center gap-2">
+                            <div>
+                                <div className="text-xs font-medium">Interested Leads</div>
+                                <div className="text-lg font-bold">{leadStats.interested}</div>
+                            </div>
+                            <i className="ri-star-line text-2xl ml-auto"></i>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-span-12 sm:col-span-3 md:col-span-2">
+                    <div className="box bg-warning text-white p-3 rounded-md">
+                        <div className="flex items-center gap-2">
+                            <div>
+                                <div className="text-xs font-medium">Contacted Leads</div>
+                                <div className="text-lg font-bold">{leadStats.contacted}</div>
+                            </div>
+                            <i className="ri-contacts-line text-2xl ml-auto"></i>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-span-12 sm:col-span-3 md:col-span-2">
+                    <div className="box bg-danger text-white p-3 rounded-md">
+                        <div className="flex items-center gap-2">
+                            <div>
+                                <div className="text-xs font-medium">Closed Leads</div>
+                                <div className="text-lg font-bold">{leadStats.closed}</div>
+                            </div>
+                            <i className="ri-close-circle-line text-2xl ml-auto"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-12 gap-6">
                 <div className="col-span-12">
                     <div className="box">

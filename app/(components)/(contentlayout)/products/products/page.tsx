@@ -409,9 +409,9 @@ const Products = () => {
 
     const headers = [
         { key: 'name', label: 'Name', sortable: true },
-        { key: 'type', label: 'Type', sortable: true },
+        { key: 'type', label: 'Type', sortable: false },
         { key: 'category', label: 'Category', sortable: true },
-        { key: 'commission', label: 'Commission', sortable: true },
+        { key: 'commission', label: 'Commission', sortable: false },
         { key: 'status', label: 'Status', sortable: true },
         { key: 'actions', label: 'Actions', sortable: false }
     ];
