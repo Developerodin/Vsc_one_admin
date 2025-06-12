@@ -131,7 +131,13 @@ const Leads = () => {
         setTotalResults(filtered.length);
         setTotalPages(Math.ceil(filtered.length / itemsPerPage));
         setCurrentPage(1);
-    }, [selectedFilter, leads, itemsPerPage]);
+    }, [selectedFilter, itemsPerPage]);
+
+    // Update filtered leads when filter changes
+    useEffect(() => {
+        const filtered = getFilteredLeads();
+        setFilteredLeads(filtered);
+    }, [leads]);
 
     // Fetch all leads via pagination for stats
     const fetchAllLeadsForStats = async () => {
@@ -493,15 +499,15 @@ const Leads = () => {
                         <div className="box-header">
                             <h5 className="box-title">Leads List</h5>
                             <div className="flex gap-2">
-                                <button 
+                                {!(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
                                     type="button" 
                                     className="ti-btn ti-btn-danger"
                                     onClick={handleDeleteSelected}
                                     disabled={selectedIds.length === 0 || deleteSelectedLoading}
                                 >
                                     <i className="ri-delete-bin-line me-2"></i>{" "}
-                                    {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
-                                </button>
+                                    {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
+                                </button> : null}
                                 <button 
                                     type="button" 
                                     className="ti-btn ti-btn-primary"

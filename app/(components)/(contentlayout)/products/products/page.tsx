@@ -98,7 +98,27 @@ const Products = () => {
             setTotalPages(Math.ceil(filtered.length / itemsPerPage));
         }
         setCurrentPage(1); // Reset to first page when filtering
-    }, [searchQuery, products]);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        if (searchQuery.trim() === '') {
+            setFilteredProducts(products);
+        } else {
+            const filtered = products.filter(product => {
+                const productName = product.name.toLowerCase();
+                const productType = product.type.toLowerCase();
+                const productCategory = product.category.toLowerCase();
+                const searchLower = searchQuery.toLowerCase();
+                
+                return productName.includes(searchLower) || 
+                       productType.includes(searchLower) || 
+                       productCategory.includes(searchLower);
+            });
+            setFilteredProducts(filtered);
+            setTotalResults(filtered.length);
+            setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+        }
+    }, [products]);
 
     const fetchProducts = async () => {
         try {
@@ -426,15 +446,15 @@ const Products = () => {
                         <div className="box-header">
                             <h5 className="box-title">Products List</h5>
                             <div className="flex space-x-2">
-                                <button 
+                                {!(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
                                     type="button" 
                                     className="ti-btn ti-btn-danger"
                                     onClick={handleDeleteSelected}
                                     disabled={selectedIds.length === 0 || deleteSelectedLoading}
                                 >
                                     <i className="ri-delete-bin-line me-2"></i>{" "}
-                                    {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
-                                </button>
+                                    {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
+                                </button> : null}
                                 <button
                   type="button"
                   className="ti-btn ti-btn-primary"
@@ -726,7 +746,7 @@ const Products = () => {
                         <div className="box-body">
                             <DataTable 
                                 headers={headers} 
-                                data={filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+                                data={filteredProducts}
                                 currentPage={currentPage}
                                 totalPages={totalPages}
                                 onPageChange={(page) => {
