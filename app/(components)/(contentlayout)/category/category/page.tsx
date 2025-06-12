@@ -91,7 +91,32 @@ const Category = () => {
       setTotalPages(Math.ceil(filtered.length / itemsPerPage));
     }
     setCurrentPage(1);
-  }, [searchQuery, categories, itemsPerPage]);
+  }, [searchQuery, itemsPerPage]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredProducts(categories);
+    } else {
+      const filtered = categories.filter(category => {
+        // Extract text content from JSX elements
+        const categoryName = React.isValidElement(category.categoryName) 
+          ? (category.categoryName as React.ReactElement).props.children 
+          : category.categoryName;
+        const subcategoryName = React.isValidElement(category.subcategoryName)
+          ? (category.subcategoryName as React.ReactElement).props.children
+          : category.subcategoryName;
+
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          String(categoryName).toLowerCase().includes(searchLower) ||
+          String(subcategoryName).toLowerCase().includes(searchLower)
+        );
+      });
+      setFilteredProducts(filtered);
+      setTotalResults(filtered.length);
+      setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    }
+  }, [categories]);
 
   const fetchCategories = async () => {
     try {
@@ -149,7 +174,7 @@ const Category = () => {
                 {
                   icon: "ri-eye-line",
                   className: "ti-btn-primary",
-                  href: `/subcategory/subcategory?id=${sub.id}`,
+                  href: `/subcategory/subcategory?id=${category.id}`,
                 },
                 {
                   icon: "ri-edit-line",
@@ -436,15 +461,15 @@ const Category = () => {
             <div className="box-header">
               <h5 className="box-title">Category List</h5>
               <div className="flex space-x-2">
-                <button
+                {!(selectedIds.length === 0 || deleteSelectedLoading) ? <button
                   type="button"
                   className="ti-btn ti-btn-danger"
                   onClick={handleDeleteSelected}
                   disabled={selectedIds.length === 0 || deleteSelectedLoading}
                 >
                   <i className="ri-delete-bin-line me-2"></i>{" "}
-                  {deleteSelectedLoading ? "Deleting..." : "Delete Selected"}
-                </button>
+                  {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
+                </button> : null}
                 <button
                   type="button"
                   className="ti-btn ti-btn-primary"
