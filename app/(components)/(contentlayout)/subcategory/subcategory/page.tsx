@@ -42,7 +42,7 @@ const Subcategory = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}subcategories/category/${categoryId}?limit=10&page=${currentPage}`, {
+            const response = await axios.get(`${Base_url}subcategories/category/${categoryId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

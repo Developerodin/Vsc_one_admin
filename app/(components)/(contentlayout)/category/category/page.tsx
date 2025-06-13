@@ -146,7 +146,7 @@ const Category = () => {
               id: sub.id,
               subcategoryName: (
                 <Link
-                  href={`/subcategory/edit?id=${sub.id}`}
+                  href={`/subcategory/subcategory?categoryId=${category.id}`}
                   className="text-black hover:text-primary-dark"
                 >
                   {sub.name || "--"}
@@ -174,17 +174,17 @@ const Category = () => {
                 {
                   icon: "ri-eye-line",
                   className: "ti-btn-primary",
-                  href: `/subcategory/subcategory?id=${category.id}`,
+                  href: `/subcategory/subcategory?categoryId=${category.id}`,
                 },
                 {
                   icon: "ri-edit-line",
                   className: "ti-btn-info",
-                  href: `/subcategory?id=${sub.id}`,
+                  href: `/category/edit?id=${category.id}`,
                 },
                 {
                   icon: "ri-delete-bin-line",
                   className: "ti-btn-danger",
-                  onClick: () => handleDelete(sub.id),
+                  onClick: () => handleDelete(category.id),
                 },
               ],
             }));
@@ -214,7 +214,7 @@ const Category = () => {
                   {
                     icon: "ri-eye-line",
                     className: "ti-btn-primary",
-                    href: `/category/view?id=${category.id}`,
+                    href: `/subcategory/subcategory?categoryId=${category.id}`,
                   },
                   {
                     icon: "ri-edit-line",
