@@ -175,6 +175,13 @@ export const MenuItems: any = [
     dirchange: false
   },
 
-
- 
+  {
+    icon: CommissionIcon,
+    title: "Withdrawals",
+    type: "link",
+    path: "/withdrawal/withdrawal",
+    active: false,
+    selected: false,
+    dirchange: false
+  }
 ];
