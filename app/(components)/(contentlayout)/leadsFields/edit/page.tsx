@@ -15,6 +15,7 @@ interface FormData {
     customFields: Array<{
         name: string;
         type: string;
+        fieldOption: string;
     }>;
 }
 
@@ -36,6 +37,12 @@ const fieldTypes = [
     { value: 'file', label: 'File' },
     { value: 'array', label: 'Array' },
     { value: 'object', label: 'Object' }
+];
+
+// Field option types for the dropdown
+const fieldOptions = [
+    { value: 'optional', label: 'Optional' },
+    { value: 'mandatory', label: 'Mandatory' }
 ];
 
 const EditLeads = () => {
@@ -183,7 +190,7 @@ const EditLeads = () => {
     const addCustomField = () => {
         setFormData(prev => ({
             ...prev,
-            customFields: [...prev.customFields, { name: '', type: 'string' }]
+            customFields: [...prev.customFields, { name: '', type: 'string', fieldOption: 'optional' }]
         }));
     };
 
@@ -194,7 +201,7 @@ const EditLeads = () => {
         }));
     };
 
-    const updateCustomField = (index: number, field: 'name' | 'type', value: string) => {
+    const updateCustomField = (index: number, field: 'name' | 'type' | 'fieldOption', value: string) => {
         setFormData(prev => ({
             ...prev,
             customFields: prev.customFields.map((item, i) => 
@@ -226,7 +233,8 @@ const EditLeads = () => {
                 category: formData.category, // This is now the category ID
                 fields: formData.customFields.map(field => ({
                     name: field.name.trim(),
-                    type: field.type
+                    type: field.type,
+                    fieldOption: field.fieldOption.toLowerCase()
                 }))
             };
 
@@ -364,7 +372,7 @@ const EditLeads = () => {
 
                     {formData.customFields.map((field, index) => (
                         <div key={index} className="grid grid-cols-12 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
-                            <div className="col-span-5">
+                            <div className="col-span-4">
                                 <label className="form-label text-sm">Field Name</label>
                                 <input
                                     type="text"
@@ -376,13 +384,25 @@ const EditLeads = () => {
                                 />
                             </div>
                             
-                            <div className="col-span-5">
+                            <div className="col-span-3">
                                 <label className="form-label text-sm">Field Type</label>
                                 <Select
                                     options={fieldTypes}
                                     value={fieldTypes.find(option => option.value === field.type)}
                                     onChange={(option) => updateCustomField(index, 'type', option?.value || 'string')}
                                     placeholder="Select field type"
+                                    className="basic-single"
+                                    classNamePrefix="Select2"
+                                />
+                            </div>
+
+                            <div className="col-span-3">
+                                <label className="form-label text-sm">Field Option</label>
+                                <Select
+                                    options={fieldOptions}
+                                    value={fieldOptions.find(option => option.value === field.fieldOption)}
+                                    onChange={(option) => updateCustomField(index, 'fieldOption', option?.value || 'optional')}
+                                    placeholder="Select option"
                                     className="basic-single"
                                     classNamePrefix="Select2"
                                 />
