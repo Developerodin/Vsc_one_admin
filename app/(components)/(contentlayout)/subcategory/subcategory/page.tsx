@@ -394,14 +394,34 @@ const Subcategory = () => {
                 return;
             }
 
-            setSelectedImageFile(file);
+            // Validate image dimensions (minimum 48x48 pixels)
+            const img = new Image();
+            const url = URL.createObjectURL(file);
             
-            // Create preview
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setPreviewImage(e.target?.result as string);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                
+                if (img.width < 48 || img.height < 48) {
+                    alert('Image dimensions must be at least 48x48 pixels. Current dimensions: ' + img.width + 'x' + img.height);
+                    return;
+                }
+
+                setSelectedImageFile(file);
+                
+                // Create preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setPreviewImage(e.target?.result as string);
+                };
+                reader.readAsDataURL(file);
             };
-            reader.readAsDataURL(file);
+
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                alert('Error reading image file. Please try again.');
+            };
+
+            img.src = url;
         }
     };
 
@@ -965,7 +985,7 @@ const Subcategory = () => {
                                                     accept="image/*"
                                                     onChange={handleImageFileChange}
                                                 />
-                                                <small className="text-gray-500">Supported formats: JPG, PNG, GIF. Max size: 5MB</small>
+                                                <small className="text-gray-500">Supported formats: JPG, PNG, GIF. Max size: 5MB. Minimum dimensions: 48x48 pixels</small>
                                             </div>
                                             <div className="xl:col-span-6 col-span-12 flex items-end">
                                                 <button
