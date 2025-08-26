@@ -66,11 +66,9 @@ interface FormData {
         url: string;
         type: string;
     }>;
-    images: Array<{
-        url: string;
-        alt: string;
-    }>;
     metadata: Map<string, any>;
+    image?: string;
+    imageKey?: string;
 }
 
 const Subcategory = () => {
@@ -118,8 +116,9 @@ const Subcategory = () => {
         },
         status: 'active',
         documents: [],
-        images: [],
-        metadata: new Map()
+        metadata: new Map(),
+        image: '',
+        imageKey: ''
     });
     const [isEditing, setIsEditing] = useState(false);
     const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
@@ -128,6 +127,10 @@ const Subcategory = () => {
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const searchParams = useSearchParams();
     const categoryId = searchParams.get('categoryId');
+
+    const [imageUploadLoading, setImageUploadLoading] = useState(false);
+    const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+    const [previewImage, setPreviewImage] = useState<string>('');
 
     useEffect(() => {
         if (categoryId) {
@@ -277,9 +280,16 @@ const Subcategory = () => {
                 },
                 status: subcategoryData.status || 'active',
                 documents: subcategoryData.documents || [],
-                images: subcategoryData.images || [],
-                metadata: new Map(Object.entries(subcategoryData.metadata || {}))
+                metadata: new Map(Object.entries(subcategoryData.metadata || {})),
+                image: subcategoryData.image || '',
+                imageKey: subcategoryData.imageKey || ''
             });
+
+            // Set preview image if exists
+            if (subcategoryData.image) {
+                setPreviewImage(subcategoryData.image);
+            }
+
             setIsEditing(true);
             setSelectedSubcategory(id);
 
@@ -326,6 +336,85 @@ const Subcategory = () => {
         }
     };
 
+    const handleImageUpload = async () => {
+        if (!selectedImageFile) {
+            alert('Please select an image first');
+            return;
+        }
+
+        setImageUploadLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const formData = new FormData();
+            formData.append('file', selectedImageFile);
+
+            const response = await axios.post(`${Base_url}files/upload`, formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            const { url, key } = response.data.data;
+            
+            // Update form data with the uploaded image information
+            setFormData(prev => ({
+                ...prev,
+                image: url,
+                imageKey: key
+            }));
+
+            alert('Image uploaded successfully!');
+        } catch (error: any) {
+            console.error('Error uploading image:', error);
+            let errorMessage = 'Error uploading image';
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            alert(errorMessage);
+        } finally {
+            setImageUploadLoading(false);
+        }
+    };
+
+    const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file');
+                return;
+            }
+
+            // Validate file size (5MB limit)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image size should be less than 5MB');
+                return;
+            }
+
+            setSelectedImageFile(file);
+            
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setPreviewImage(e.target?.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeImage = () => {
+        setSelectedImageFile(null);
+        setPreviewImage('');
+        setFormData(prev => ({
+            ...prev,
+            image: '',
+            imageKey: ''
+        }));
+    };
+
     const resetForm = () => {
         setFormData({
             name: '',
@@ -358,11 +447,14 @@ const Subcategory = () => {
             },
             status: 'active',
             documents: [],
-            images: [],
-            metadata: new Map()
+            metadata: new Map(),
+            image: '',
+            imageKey: ''
         });
         setIsEditing(false);
         setSelectedSubcategory(null);
+        setSelectedImageFile(null);
+        setPreviewImage('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -857,6 +949,77 @@ const Subcategory = () => {
                                             onChange={handleInputChange}
                                             placeholder="Enter Duration"
                                         />
+                                    </div>
+                                    <div className="col-span-12">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h6 className="mb-0">Subcategory Image</h6>
+                                            <span className="text-xs text-gray-500">Upload an image for this subcategory</span>
+                                        </div>
+                                        <div className="grid grid-cols-12 gap-4">
+                                            <div className="xl:col-span-6 col-span-12">
+                                                <label htmlFor="image" className="form-label">Select Image</label>
+                                                <input
+                                                    type="file"
+                                                    className="form-control"
+                                                    id="image"
+                                                    accept="image/*"
+                                                    onChange={handleImageFileChange}
+                                                />
+                                                <small className="text-gray-500">Supported formats: JPG, PNG, GIF. Max size: 5MB</small>
+                                            </div>
+                                            <div className="xl:col-span-6 col-span-12 flex items-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleImageUpload}
+                                                    disabled={!selectedImageFile || imageUploadLoading}
+                                                    className="ti-btn ti-btn-primary-full w-full"
+                                                >
+                                                    {imageUploadLoading ? (
+                                                        <>
+                                                            <i className="ri-loader-4-line animate-spin mr-2"></i>
+                                                            Uploading...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <i className="ri-upload-2-line mr-2"></i>
+                                                            Upload Image
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Image Preview */}
+                                        {(previewImage || formData.image) && (
+                                            <div className="mt-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="form-label mb-0">Image Preview</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={removeImage}
+                                                        className="ti-btn ti-btn-danger !py-1 !px-2 !text-xs"
+                                                    >
+                                                        <i className="ri-delete-bin-line mr-1"></i>
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                                <div className="border rounded-lg p-4 bg-gray-50">
+                                                    <img 
+                                                        src={previewImage || formData.image} 
+                                                        alt="Subcategory preview" 
+                                                        className="max-w-full h-auto max-h-48 mx-auto rounded"
+                                                    />
+                                                    {formData.image && (
+                                                        <div className="mt-2 text-center">
+                                                            <small className="text-green-600">
+                                                                <i className="ri-check-line mr-1"></i>
+                                                                Image uploaded successfully
+                                                            </small>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="xl:col-span-4 col-span-12">
                                         <label htmlFor="interestRate" className="form-label">Interest Rate (%)</label>
