@@ -84,6 +84,8 @@ const CreateProduct = () => {
             currency: "INR",
             discounts: []
         },
+        coverage: "",
+        duration: "",
         interestRate: 0,
         loanAmount: {
             min: 0,
@@ -102,7 +104,6 @@ const CreateProduct = () => {
     const tabs = [
         { name: 'General Information', icon: 'ri-information-line' },
         { name: 'Features and Terms', icon: 'ri-list-check' },
-        { name: 'Commission', icon: 'ri-money-dollar-circle-line' },
         { name: 'Pricing', icon: 'ri-price-tag-3-line' },
         { name: 'Insurance Details', icon: 'ri-shield-check-line' },
         { name: 'Banking Details', icon: 'ri-bank-line' },
@@ -164,7 +165,7 @@ const CreateProduct = () => {
             setFormData(prev => ({
                 ...prev,
                 [parent]: {
-                    ...prev[parent as keyof typeof prev],
+                    ...(prev[parent as keyof typeof prev] as any),
                     [child]: value
                 }
             }));
@@ -392,60 +393,6 @@ const CreateProduct = () => {
                                 {activeTab === 2 && (
                                     <div className="grid grid-cols-12 gap-4">
                                         <div className="col-span-12">
-                                            <label className="form-label">Commission Percentage *</label>
-                                            <input
-                                                type="number"
-                                                className="form-control"
-                                                name="commission.percentage"
-                                                value={formData.commission.percentage}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter Commission Percentage"
-                                                min="0"
-                                                max="100"
-                                                required
-                                            />
-                                        </div>
-                                        <div className="col-span-12">
-                                            <label className="form-label">Minimum Amount</label>
-                                            <input
-                                                type="number"
-                                                className="form-control"
-                                                name="commission.minAmount"
-                                                value={formData.commission.minAmount}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter Minimum Amount"
-                                                min="0"
-                                            />
-                                        </div>
-                                        <div className="col-span-12">
-                                            <label className="form-label">Maximum Amount</label>
-                                            <input
-                                                type="number"
-                                                className="form-control"
-                                                name="commission.maxAmount"
-                                                value={formData.commission.maxAmount}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter Maximum Amount"
-                                                min="0"
-                                            />
-                                        </div>
-                                        <div className="col-span-12">
-                                            <label className="form-label">Bonus Amount</label>
-                                            <input
-                                                type="number"
-                                                className="form-control"
-                                                name="commission.bonus"
-                                                value={formData.commission.bonus}
-                                                onChange={handleInputChange}
-                                                placeholder="Enter Bonus Amount"
-                                                min="0"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                                {activeTab === 3 && (
-                                    <div className="grid grid-cols-12 gap-4">
-                                        <div className="col-span-12">
                                             <label className="form-label">Base Price *</label>
                                             <input
                                                 type="number"
@@ -477,12 +424,14 @@ const CreateProduct = () => {
                                                             options={DiscountTypeOptions}
                                                             value={DiscountTypeOptions.find(option => option.value === discount.type)}
                                                             onChange={(option) => {
-                                                                const newDiscounts = [...formData.pricing.discounts];
-                                                                newDiscounts[index] = { ...discount, type: option.value };
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    pricing: { ...prev.pricing, discounts: newDiscounts }
-                                                                }));
+                                                                if (option) {
+                                                                    const newDiscounts = [...formData.pricing.discounts];
+                                                                    newDiscounts[index] = { ...discount, type: option.value as 'percentage' | 'fixed' };
+                                                                    setFormData(prev => ({
+                                                                        ...prev,
+                                                                        pricing: { ...prev.pricing, discounts: newDiscounts }
+                                                                    }));
+                                                                }
                                                             }}
                                                             placeholder="Select Type"
                                                         />
@@ -548,7 +497,7 @@ const CreateProduct = () => {
                                         </div>
                                     </div>
                                 )}
-                                {activeTab === 4 && formData.type === 'insurance' && (
+                                {activeTab === 3 && formData.type === 'insurance' && (
                                     <div className="grid grid-cols-12 gap-4">
                                         <div className="col-span-12">
                                             <label className="form-label">Coverage</label>
@@ -574,7 +523,7 @@ const CreateProduct = () => {
                                         </div>
                                     </div>
                                 )}
-                                {activeTab === 5 && formData.type === 'banking' && (
+                                {activeTab === 4 && formData.type === 'banking' && (
                                     <div className="grid grid-cols-12 gap-4">
                                         <div className="col-span-12">
                                             <label className="form-label">Interest Rate</label>
@@ -639,7 +588,7 @@ const CreateProduct = () => {
                                         </div>
                                     </div>
                                 )}
-                                {activeTab === 6 && (
+                                {activeTab === 5 && (
                                     <div className="grid grid-cols-12 gap-4">
                                         <div className="col-span-12">
                                             <label className="form-label">Documents</label>
@@ -760,7 +709,7 @@ const CreateProduct = () => {
                                         </div>
                                     </div>
                                 )}
-                                {activeTab === 7 && (
+                                {activeTab === 6 && (
                                     <div className="grid grid-cols-12 gap-4">
                                         <div className="col-span-12">
                                             <label className="form-label">Additional Notes</label>
