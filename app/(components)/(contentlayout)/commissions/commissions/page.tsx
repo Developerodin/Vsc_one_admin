@@ -74,14 +74,40 @@ interface Product {
   id: string;
 }
 
+interface PaymentDetails {
+  bankAccount?: string;
+  transactionId?: string;
+  paymentDate?: string;
+  paymentMethod?: 'bank_transfer' | 'upi' | 'cheque' | 'other';
+}
+
+interface BankAccount {
+  id: string;
+  agent: string;
+  accountHolderName: string;
+  accountNumber: string;
+  bankName: string;
+  branchName?: string;
+  ifscCode: string;
+  accountType: string;
+  status: string;
+  isDefault: boolean;
+  documents: any[];
+  verificationDetails?: any;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface Commission {
   bonus: number;
   status: string;
   product: Product;
   lead: string;
   amount: number;
-  percentage: number;
   baseAmount: number;
+  tdsPercentage?: number;
+  paymentDetails?: PaymentDetails;
   agent: Agent;
   createdAt: string;
   updatedAt: string;
@@ -102,9 +128,25 @@ const Commissions = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCommission, setEditingCommission] = useState<Commission | null>(null);
-  const [editPercentage, setEditPercentage] = useState('');
+  const [editBaseAmount, setEditBaseAmount] = useState('');
+  const [editTdsPercentage, setEditTdsPercentage] = useState('');
+  const [editStatus, setEditStatus] = useState('');
   const [showBankDetailsModal, setShowBankDetailsModal] = useState(false);
   const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
+  const [showBankAccountModal, setShowBankAccountModal] = useState(false);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
+  const [selectedBankAccount, setSelectedBankAccount] = useState<BankAccount | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentFormData, setPaymentFormData] = useState<{
+    transactionId: string;
+    paymentDate: string;
+    paymentMethod: 'bank_transfer' | 'upi' | 'cheque' | 'other';
+  }>({
+    transactionId: '',
+    paymentDate: '',
+    paymentMethod: 'bank_transfer'
+  });
 
   useEffect(() => {
     fetchCommissions();
@@ -206,25 +248,40 @@ const Commissions = () => {
 
   const handleEditCommission = (commission: Commission) => {
     setEditingCommission(commission);
-    setEditPercentage(commission.percentage.toString());
+    setEditBaseAmount(commission.baseAmount.toString());
+    setEditTdsPercentage(commission.tdsPercentage?.toString() || '0');
+    setEditStatus(commission.status);
     setShowEditModal(true);
   };
 
   const handleUpdateCommission = async () => {
-    if (!editingCommission || !editPercentage) return;
+    if (!editingCommission || !editBaseAmount || !editStatus) return;
     
     try {
       const token = localStorage.getItem("token");
-      const newPercentage = parseFloat(editPercentage);
+      const newBaseAmount = parseFloat(editBaseAmount);
+      const newTdsPercentage = parseFloat(editTdsPercentage);
       
-      if (isNaN(newPercentage) || newPercentage < 0 || newPercentage > 100) {
-        alert('Please enter a valid percentage between 0 and 100');
+      // Validation
+      if (isNaN(newBaseAmount) || newBaseAmount < 0) {
+        alert('Please enter a valid base amount');
+        return;
+      }
+      
+      if (isNaN(newTdsPercentage) || newTdsPercentage < 0 || newTdsPercentage > 100) {
+        alert('Please enter a valid TDS percentage between 0 and 100');
         return;
       }
 
+      const updateData = {
+        baseAmount: newBaseAmount,
+        tdsPercentage: newTdsPercentage,
+        status: editStatus
+      };
+
       await axios.patch(
         `${Base_url}commissions/${editingCommission.id}`,
-        { percentage: newPercentage },
+        updateData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -234,17 +291,139 @@ const Commissions = () => {
       
       setShowEditModal(false);
       setEditingCommission(null);
-      setEditPercentage('');
+      setEditBaseAmount('');
+      setEditTdsPercentage('');
+      setEditStatus('');
       fetchCommissions(); // Refresh the data
     } catch (error) {
-      console.error("Error updating commission percentage:", error);
-      alert('Failed to update commission percentage');
+      console.error("Error updating commission:", error);
+      alert('Failed to update commission');
     }
   };
 
   const handleShowBankDetails = (commission: Commission) => {
     setSelectedCommission(commission);
     setShowBankDetailsModal(true);
+  };
+
+  const fetchBankAccounts = async (userId: string) => {
+    try {
+      setLoadingBankAccounts(true);
+      const token = localStorage.getItem("token");
+      
+      const response = await axios.get(`${Base_url}users/${userId}/bank-accounts`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      
+      console.log('Bank Accounts API Response:', response.data);
+      const accounts = response.data.results || [];
+      setBankAccounts(accounts);
+    } catch (error) {
+      console.error("Error fetching bank accounts:", error);
+      setBankAccounts([]);
+    } finally {
+      setLoadingBankAccounts(false);
+    }
+  };
+
+  const handleSelectBankAccount = (commission: Commission) => {
+    setSelectedCommission(commission);
+    setShowBankAccountModal(true);
+    
+    // Pre-populate payment form with existing data if available
+    if (commission.paymentDetails) {
+      // Convert date to YYYY-MM-DD format for HTML date input
+      let formattedDate = '';
+      if (commission.paymentDetails.paymentDate) {
+        console.log('Original payment date:', commission.paymentDetails.paymentDate);
+        const date = new Date(commission.paymentDetails.paymentDate);
+        if (!isNaN(date.getTime())) {
+          formattedDate = date.toISOString().split('T')[0];
+          console.log('Formatted date for input:', formattedDate);
+        }
+      }
+      
+      setPaymentFormData({
+        transactionId: commission.paymentDetails.transactionId || '',
+        paymentDate: formattedDate,
+        paymentMethod: commission.paymentDetails.paymentMethod || 'bank_transfer'
+      });
+    } else {
+      setPaymentFormData({
+        transactionId: '',
+        paymentDate: '',
+        paymentMethod: 'bank_transfer'
+      });
+    }
+    
+    if (commission.agent && typeof commission.agent === 'object' && commission.agent.id) {
+      fetchBankAccounts(commission.agent.id);
+    }
+  };
+
+  const handleBankAccountSelection = (bankAccount: BankAccount) => {
+    setSelectedBankAccount(bankAccount);
+    setShowPaymentForm(true);
+    
+    // Convert date to YYYY-MM-DD format for HTML date input
+    let formattedDate = '';
+    if (selectedCommission?.paymentDetails?.paymentDate) {
+      const date = new Date(selectedCommission.paymentDetails.paymentDate);
+      if (!isNaN(date.getTime())) {
+        formattedDate = date.toISOString().split('T')[0];
+      }
+    }
+    
+    setPaymentFormData({
+      transactionId: selectedCommission?.paymentDetails?.transactionId || '',
+      paymentDate: formattedDate,
+      paymentMethod: selectedCommission?.paymentDetails?.paymentMethod || 'bank_transfer'
+    });
+  };
+
+  const handleUpdatePaymentDetails = async () => {
+    if (!selectedCommission) return;
+    
+    // For new payments, require bank account selection
+    if (!selectedCommission.paymentDetails && !selectedBankAccount) {
+      alert('Please select a bank account');
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem("token");
+      
+      const updateData = {
+        paymentDetails: {
+          bankAccount: selectedBankAccount?.id || selectedCommission.paymentDetails?.bankAccount,
+          transactionId: paymentFormData.transactionId,
+          paymentDate: paymentFormData.paymentDate,
+          paymentMethod: paymentFormData.paymentMethod
+        }
+      };
+
+      await axios.patch(
+        `${Base_url}commissions/${selectedCommission.id}`,
+        updateData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      // Close modals and refresh data
+      setShowBankAccountModal(false);
+      setShowPaymentForm(false);
+      setSelectedCommission(null);
+      setSelectedBankAccount(null);
+      fetchCommissions();
+    } catch (error) {
+      console.error("Error updating payment details:", error);
+      alert('Failed to update payment details');
+    }
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -266,7 +445,7 @@ const Commissions = () => {
     { key: 'product', label: 'Product', sortable: false },
     { key: 'agent', label: 'Agent', sortable: false },
     { key: 'baseAmount', label: 'Base Amount', sortable: false },
-    { key: 'percentage', label: 'Commission %', sortable: false },
+    { key: 'tdsPercentage', label: 'TDS %', sortable: false },
     { key: 'amount', label: 'Commission Amount', sortable: false },
     { key: 'status', label: 'Status', sortable: false },
     { key: 'createdAt', label: 'Created At', sortable: false },
@@ -290,18 +469,7 @@ const Commissions = () => {
       <span className="text-muted">No Agent</span>
     ),
     baseAmount: `₹${commission.baseAmount || 0}`,
-    percentage: (
-      <div className="flex items-center gap-2">
-        <span>{commission.percentage || 0}%</span>
-        <button
-          onClick={() => handleEditCommission(commission)}
-          className="ti-btn ti-btn-sm ti-btn-outline-primary"
-          title="Edit Commission Percentage"
-        >
-          <i className="ri-edit-line"></i>
-        </button>
-      </div>
-    ),
+    tdsPercentage: `${commission.tdsPercentage || 0}%`,
     amount: `₹${commission.amount || 0}`,
     status: (
       <span className={`badge ${getStatusBadgeClass(commission.status || 'pending')}`}>
@@ -313,35 +481,17 @@ const Commissions = () => {
       : 'N/A',
     actions: [
       {
+        icon: 'ri-edit-line',
+        className: 'ti-btn-primary',
+        onClick: () => handleEditCommission(commission),
+        title: 'Edit Commission'
+      },
+      {
         icon: 'ri-bank-line',
         className: 'ti-btn-info',
-        onClick: () => handleShowBankDetails(commission),
-        title: 'View Bank Details'
-      },
-      ...(commission.status === 'pending' ? [
-        {
-          icon: 'ri-check-line',
-          className: 'ti-btn-success',
-          onClick: () => handleStatusChange(commission.id, 'approved'),
-          title: 'Approve'
-        }
-      ] : []),
-      ...(commission.status === 'approved' ? [
-        {
-          icon: 'ri-money-dollar-line',
-          className: 'ti-btn-info',
-          onClick: () => handleStatusChange(commission.id, 'paid'),
-          title: 'Mark as Paid'
-        }
-      ] : []),
-      ...(commission.status !== 'cancelled' ? [
-        {
-          icon: 'ri-close-line',
-          className: 'ti-btn-danger',
-          onClick: () => handleStatusChange(commission.id, 'cancelled'),
-          title: 'Cancel'
-        }
-      ] : [])
+        onClick: () => handleSelectBankAccount(commission),
+        title: 'Select Bank Account'
+      }
     ]
   }));
 
@@ -471,14 +621,16 @@ const Commissions = () => {
       {/* Edit Commission Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">Edit Commission Percentage</h3>
+              <h3 className="text-lg font-semibold">Edit Commission Details</h3>
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   setEditingCommission(null);
-                  setEditPercentage('');
+                  setEditBaseAmount('');
+                  setEditTdsPercentage('');
+                  setEditStatus('');
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -487,20 +639,53 @@ const Commissions = () => {
             </div>
             
             <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Commission Percentage (%)
-                </label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  value={editPercentage}
-                  onChange={(e) => setEditPercentage(e.target.value)}
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  placeholder="Enter percentage (0-100)"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Base Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={editBaseAmount}
+                    onChange={(e) => setEditBaseAmount(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter base amount"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    TDS Percentage (%)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={editTdsPercentage}
+                    onChange={(e) => setEditTdsPercentage(e.target.value)}
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="Enter TDS percentage (0-100)"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="paid">Paid</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
               </div>
               
               {editingCommission && (
@@ -508,8 +693,7 @@ const Commissions = () => {
                   <p className="text-sm text-gray-600">
                     <strong>Product:</strong> {editingCommission.product?.name}<br/>
                     <strong>Agent:</strong> {editingCommission.agent?.name}<br/>
-                    <strong>Current Percentage:</strong> {editingCommission.percentage}%<br/>
-                    <strong>Base Amount:</strong> ₹{editingCommission.baseAmount}
+                    <strong>Current Amount:</strong> ₹{editingCommission.amount}
                   </p>
                 </div>
               )}
@@ -520,7 +704,9 @@ const Commissions = () => {
                 onClick={() => {
                   setShowEditModal(false);
                   setEditingCommission(null);
-                  setEditPercentage('');
+                  setEditBaseAmount('');
+                  setEditTdsPercentage('');
+                  setEditStatus('');
                 }}
                 className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
               >
@@ -572,8 +758,8 @@ const Commissions = () => {
                     <p className="text-sm text-gray-800">₹{selectedCommission.baseAmount || 0}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600">Commission Percentage</label>
-                    <p className="text-sm text-gray-800">{selectedCommission.percentage || 0}%</p>
+                    <label className="block text-sm font-medium text-gray-600">TDS Percentage</label>
+                    <p className="text-sm text-gray-800">{selectedCommission.tdsPercentage || 0}%</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Commission Amount</label>
@@ -690,6 +876,245 @@ const Commissions = () => {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bank Account Selection Modal */}
+      {showBankAccountModal && selectedCommission && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Select Bank Account</h3>
+              <button
+                onClick={() => {
+                  setShowBankAccountModal(false);
+                  setSelectedCommission(null);
+                  setBankAccounts([]);
+                  setSelectedBankAccount(null);
+                  setShowPaymentForm(false);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+            
+            <div className="p-4">
+              {/* Commission Info */}
+              <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-md font-semibold mb-2 text-gray-800">Commission Details</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Product:</span>
+                    <p className="text-gray-800">{selectedCommission.product?.name}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Agent:</span>
+                    <p className="text-gray-800">{selectedCommission.agent?.name}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Amount:</span>
+                    <p className="text-gray-800">₹{selectedCommission.amount}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Status:</span>
+                    <span className={`badge ${getStatusBadgeClass(selectedCommission.status)}`}>
+                      {selectedCommission.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Existing Payment Details */}
+              {selectedCommission.paymentDetails && (
+                <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="text-md font-semibold mb-3 text-blue-800">Current Payment Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    {selectedCommission.paymentDetails.transactionId && (
+                      <div>
+                        <span className="font-medium text-blue-600">Transaction ID:</span>
+                        <p className="text-blue-800">{selectedCommission.paymentDetails.transactionId}</p>
+                      </div>
+                    )}
+                    {selectedCommission.paymentDetails.paymentDate && (
+                      <div>
+                        <span className="font-medium text-blue-600">Payment Date:</span>
+                        <p className="text-blue-800">
+                          {new Date(selectedCommission.paymentDetails.paymentDate).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit', 
+                            year: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    )}
+                    {selectedCommission.paymentDetails.paymentMethod && (
+                      <div>
+                        <span className="font-medium text-blue-600">Payment Method:</span>
+                        <p className="text-blue-800 capitalize">
+                          {selectedCommission.paymentDetails.paymentMethod.replace('_', ' ')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Bank Accounts */}
+              <div className="mb-6">
+                <h4 className="text-md font-semibold mb-4 text-gray-800">
+                  {selectedCommission.paymentDetails ? 'Change Bank Account' : 'Select Bank Account'}
+                </h4>
+                {loadingBankAccounts ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : bankAccounts.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {bankAccounts.map((account) => {
+                      const isActiveAccount = selectedCommission.paymentDetails?.bankAccount === account.id;
+                      const isSelectedAccount = selectedBankAccount?.id === account.id;
+                      
+                      return (
+                        <div
+                          key={account.id}
+                          onClick={() => handleBankAccountSelection(account)}
+                          className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+                            isActiveAccount 
+                              ? 'border-green-500 bg-green-50' 
+                              : isSelectedAccount
+                              ? 'border-primary bg-primary-50' 
+                              : 'border-gray-200 hover:border-primary'
+                          }`}
+                        >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h5 className="font-semibold text-gray-800">{account.bankName}</h5>
+                            <p className="text-sm text-gray-600">{account.accountHolderName}</p>
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            {isActiveAccount && (
+                              <span className="badge bg-green-600 text-white text-xs">Active</span>
+                            )}
+                            {account.isDefault && (
+                              <span className="badge bg-info text-white text-xs">Default</span>
+                            )}
+                            <span className={`badge text-xs ${
+                              account.status === 'verified' 
+                                ? 'bg-success text-white' 
+                                : account.status === 'pending'
+                                ? 'bg-warning text-white'
+                                : 'bg-danger text-white'
+                            }`}>
+                              {account.status}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Account Number:</span>
+                            <span className="text-gray-800">{account.accountNumber}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">IFSC Code:</span>
+                            <span className="text-gray-800">{account.ifscCode}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Account Type:</span>
+                            <span className="text-gray-800 capitalize">{account.accountType}</span>
+                          </div>
+                          {account.branchName && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Branch:</span>
+                              <span className="text-gray-800">{account.branchName}</span>
+                            </div>
+                          )}
+                        </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <i className="ri-bank-line text-4xl mb-2"></i>
+                    <p>No bank accounts found for this agent</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Details Form */}
+              {((showPaymentForm && selectedBankAccount) || selectedCommission.paymentDetails) && (
+                <div className="border-t pt-6">
+                  <h4 className="text-md font-semibold mb-4 text-gray-800">
+                    {selectedCommission.paymentDetails ? 'Update Payment Details' : 'Add Payment Details'}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Transaction ID
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        value={paymentFormData.transactionId}
+                        onChange={(e) => setPaymentFormData({...paymentFormData, transactionId: e.target.value})}
+                        placeholder="Enter transaction ID"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Payment Date
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        value={paymentFormData.paymentDate}
+                        onChange={(e) => setPaymentFormData({...paymentFormData, paymentDate: e.target.value})}
+                        placeholder="dd/mm/yyyy"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Payment Method
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        value={paymentFormData.paymentMethod}
+                        onChange={(e) => setPaymentFormData({...paymentFormData, paymentMethod: e.target.value as 'bank_transfer' | 'upi' | 'cheque' | 'other'})}
+                      >
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="upi">UPI</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end gap-3 mt-6">
+                    <button
+                      onClick={() => {
+                        setShowPaymentForm(false);
+                        setSelectedBankAccount(null);
+                      }}
+                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleUpdatePaymentDetails}
+                      className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+                      disabled={!selectedBankAccount && !selectedCommission.paymentDetails}
+                    >
+                      {selectedCommission.paymentDetails ? 'Update Payment Details' : 'Add Payment Details'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
