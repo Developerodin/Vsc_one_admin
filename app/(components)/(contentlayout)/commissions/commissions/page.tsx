@@ -178,11 +178,11 @@ const Commissions = () => {
       }
       
       if (startDate) {
-        params.append('startDate', startDate.toISOString().split('T')[0]);
+        params.append('startDate', formatDateForAPI(startDate));
       }
       
       if (endDate) {
-        params.append('endDate', endDate.toISOString().split('T')[0]);
+        params.append('endDate', formatDateForAPI(endDate));
       }
       
       if (searchQuery.trim()) {
@@ -441,6 +441,37 @@ const Commissions = () => {
     }
   };
 
+  const formatDateForAPI = (date: Date): string => {
+    console.log('Original date object:', date);
+    console.log('Date toString:', date.toString());
+    console.log('Date.getTime():', date.getTime());
+    console.log('Date.getTimezoneOffset():', date.getTimezoneOffset());
+    
+    // Use the date as-is from the picker, since it should already be in local time
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    
+    console.log('Final formatted date for API:', formattedDate);
+    return formattedDate;
+  };
+
+  const calculateTotals = () => {
+    const totals = commissions.reduce((acc, commission) => {
+      acc.totalBaseAmount += commission.baseAmount || 0;
+      acc.totalCommissionAmount += commission.amount || 0;
+      acc.totalTdsAmount += ((commission.baseAmount || 0) * (commission.tdsPercentage || 0)) / 100;
+      return acc;
+    }, {
+      totalBaseAmount: 0,
+      totalCommissionAmount: 0,
+      totalTdsAmount: 0
+    });
+
+    return totals;
+  };
+
   const tableHeaders = [
     { key: 'product', label: 'Product', sortable: false },
     { key: 'agent', label: 'Agent', sortable: false },
@@ -522,6 +553,60 @@ const Commissions = () => {
       <Pageheader currentpage="Commissions" activepage="Pages" mainpage="Commissions" />
 
       <div className="grid grid-cols-12 gap-6">
+        {/* Summary Cards */}
+        <div className="col-span-12">
+          {(selectedStatus || startDate || endDate || searchQuery.trim()) && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <i className="ri-information-line mr-2"></i>
+                Showing totals for filtered results. Clear filters to see all data.
+              </p>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {(() => {
+              const totals = calculateTotals();
+              return [
+                {
+                  title: 'Total Base Amount',
+                  value: `₹${totals.totalBaseAmount.toLocaleString()}`,
+                  icon: 'ri-money-rupee-circle-line',
+                  bgColor: 'bg-blue-500',
+                  textColor: 'text-blue-600'
+                },
+                {
+                  title: 'Total Commission Amount',
+                  value: `₹${totals.totalCommissionAmount.toLocaleString()}`,
+                  icon: 'ri-hand-coin-line',
+                  bgColor: 'bg-green-500',
+                  textColor: 'text-green-600'
+                },
+                {
+                  title: 'Total TDS Amount',
+                  value: `₹${totals.totalTdsAmount.toLocaleString()}`,
+                  icon: 'ri-calculator-line',
+                  bgColor: 'bg-orange-500',
+                  textColor: 'text-orange-600'
+                }
+              ].map((card, index) => (
+                <div key={index} className="box">
+                  <div className="box-body">
+                    <div className="flex items-center">
+                      <div className={`flex items-center justify-center w-12 h-12 ${card.bgColor} bg-opacity-10 rounded-lg mr-4`}>
+                        <i className={`${card.icon} text-2xl ${card.textColor}`}></i>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">{card.title}</p>
+                        <p className="text-2xl font-bold text-gray-800">{card.value}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+
         <div className="col-span-12">
           <div className="box">
             <div className="box-header">
@@ -556,11 +641,23 @@ const Commissions = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                     <DatePicker
                       selected={startDate}
-                      onChange={(date) => setStartDate(date)}
+                      onChange={(date) => {
+                        console.log('Start date selected:', date);
+                        if (date) {
+                          // Set time to noon to avoid timezone issues
+                          const adjustedDate = new Date(date);
+                          adjustedDate.setHours(12, 0, 0, 0);
+                          console.log('Adjusted start date:', adjustedDate);
+                          setStartDate(adjustedDate);
+                        } else {
+                          setStartDate(date);
+                        }
+                      }}
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Select Start Date"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       maxDate={endDate || new Date()}
+
                     />
                   </div>
                   
@@ -568,12 +665,24 @@ const Commissions = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
                     <DatePicker
                       selected={endDate}
-                      onChange={(date) => setEndDate(date)}
+                      onChange={(date) => {
+                        console.log('End date selected:', date);
+                        if (date) {
+                          // Set time to noon to avoid timezone issues
+                          const adjustedDate = new Date(date);
+                          adjustedDate.setHours(12, 0, 0, 0);
+                          console.log('Adjusted end date:', adjustedDate);
+                          setEndDate(adjustedDate);
+                        } else {
+                          setEndDate(date);
+                        }
+                      }}
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Select End Date"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       minDate={startDate || undefined}
                       maxDate={new Date()}
+
                     />
                   </div>
                   
