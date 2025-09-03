@@ -14,6 +14,8 @@ import ConfirmModal from "@/app/shared/components/ConfirmModal";
 import * as XLSX from 'xlsx'
 import ProtectedRoute from "@/shared/components/ProtectedRoute";
 interface ProductData {
+    id: string;
+    srNo: number;
     name: string;
     type: string;
     category: string;
@@ -26,6 +28,7 @@ interface ProductData {
         href?: string;
         onClick?: () => void;
     }>;
+    [key: string]: any; // Add index signature to allow string indexing
 }
 
 const Products = () => {
@@ -72,10 +75,13 @@ const Products = () => {
     const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
     const [sortKey, setSortKey] = useState<string>('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [selectedStatus, setSelectedStatus] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
         fetchProducts();
-    }, [currentPage, itemsPerPage]);
+    }, [currentPage, itemsPerPage, selectedStatus, selectedCategory]);
 
     useEffect(() => {
         if (searchQuery.trim() === '') {
@@ -136,8 +142,22 @@ const Products = () => {
             }));
             setCategories(categoryOptions);
 
-            // Then get products with pagination
-            const response = await axios.get(`${Base_url}products?limit=${itemsPerPage}&page=${currentPage}`, {
+            // Build query parameters for products
+            const queryParams = new URLSearchParams({
+                limit: itemsPerPage.toString(),
+                page: currentPage.toString()
+            });
+
+            // Add filter parameters if they are selected
+            if (selectedStatus) {
+                queryParams.append('status', selectedStatus);
+            }
+            if (selectedCategory) {
+                queryParams.append('category', selectedCategory);
+            }
+
+            // Then get products with pagination and filters
+            const response = await axios.get(`${Base_url}products?${queryParams.toString()}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -147,7 +167,7 @@ const Products = () => {
             const formattedData = response.data.results.map((product: any, index: number) => {
                 // Get category names for all category IDs
                 const categoryNames = product.categories?.map((catId: string) => {
-                    const category = categoryOptions.find(cat => cat.value === catId);
+                    const category = categoryOptions.find((cat: any) => cat.value === catId);
                     return category?.label || '--';
                 }) || ['--'];
 
@@ -194,7 +214,7 @@ const Products = () => {
             setFormData(prev => ({
                 ...prev,
                 [parent]: {
-                    ...prev[parent as keyof typeof prev],
+                    ...(prev[parent as keyof typeof prev] as any),
                     [child]: value
                 }
             }));
@@ -210,12 +230,12 @@ const Products = () => {
         if (name === 'categories') {
             setFormData(prev => ({
                 ...prev,
-                categories: selectedOption.map((option: any) => option.value)
+                categories: selectedOption ? selectedOption.map((option: any) => option.value) : []
             }));
         } else {
             setFormData(prev => ({
                 ...prev,
-                [name]: selectedOption.value
+                [name]: selectedOption?.value || ''
             }));
         }
     };
@@ -360,10 +380,12 @@ const Products = () => {
 
             // Handle JSX elements
             if (React.isValidElement(valueA)) {
-                valueA = valueA.props.children;
+                const element = valueA as React.ReactElement;
+                valueA = element.props.children;
             }
             if (React.isValidElement(valueB)) {
-                valueB = valueB.props.children;
+                const element = valueB as React.ReactElement;
+                valueB = element.props.children;
             }
 
             // Handle string comparison
@@ -427,6 +449,22 @@ const Products = () => {
         { value: 'banking', label: 'Banking' }
     ];
 
+    // Filter options
+    const statusFilterOptions = [
+        { value: '', label: 'All Statuses' },
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+        { value: 'draft', label: 'Draft' }
+    ];
+
+    const categoryFilterOptions = [
+        { value: '', label: 'All Categories' },
+        ...categories.map(category => ({
+            value: category.value,
+            label: category.label
+        }))
+    ];
+
     const headers = [
         { key: 'name', label: 'Name', sortable: true },
         { key: 'type', label: 'Type', sortable: false },
@@ -455,6 +493,13 @@ const Products = () => {
                                     <i className="ri-delete-bin-line me-2"></i>{" "}
                                     {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
                                 </button> : null}
+                                <button
+                                    type="button"
+                                    className="ti-btn ti-btn-secondary"
+                                    onClick={() => setShowFilters(!showFilters)}
+                                >
+                                    <i className="ri-filter-line me-2"></i> Filters
+                                </button>
                                 <button
                   type="button"
                   className="ti-btn ti-btn-primary"
@@ -743,6 +788,47 @@ const Products = () => {
                                 </div>
                             </div>
                         </div>
+                        
+                        {/* Filter Section */}
+                        {showFilters && (
+                            <div className="box-body border-b">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="form-label">Filter by Status</label>
+                                        <Select
+                                            options={statusFilterOptions}
+                                            value={statusFilterOptions.find(option => option.value === selectedStatus)}
+                                            onChange={(option) => setSelectedStatus(option?.value || '')}
+                                            placeholder="Select Status"
+                                            isClearable
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Filter by Category</label>
+                                        <Select
+                                            options={categoryFilterOptions}
+                                            value={categoryFilterOptions.find(option => option.value === selectedCategory)}
+                                            onChange={(option) => setSelectedCategory(option?.value || '')}
+                                            placeholder="Select Category"
+                                            isClearable
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex gap-2">
+                                    <button 
+                                        type="button" 
+                                        className="ti-btn ti-btn-primary"
+                                        onClick={() => {
+                                            setSelectedStatus('');
+                                            setSelectedCategory('');
+                                        }}
+                                    >
+                                        <i className="ri-refresh-line me-2"></i> Clear Filters
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        
                         <div className="box-body">
                             <DataTable 
                                 headers={headers} 

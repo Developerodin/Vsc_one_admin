@@ -7,6 +7,9 @@ import axios from "axios";
 import { Base_url } from "@/app/api/config/BaseUrl";
 import Link from 'next/link';
 import DataTable from '@/shared/components/DataTable';
+import Select from 'react-select';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 
 
 interface BankAccount {
@@ -91,8 +94,11 @@ const Commissions = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCommission, setEditingCommission] = useState<Commission | null>(null);
@@ -102,13 +108,50 @@ const Commissions = () => {
 
   useEffect(() => {
     fetchCommissions();
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, selectedStatus, startDate, endDate]);
+
+  // Separate useEffect for search with debouncing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== undefined) {
+        fetchCommissions();
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const fetchCommissions = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${Base_url}commissions?limit=${itemsPerPage}&page=${currentPage}`, {
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('limit', itemsPerPage.toString());
+      params.append('page', currentPage.toString());
+      
+      if (selectedStatus) {
+        params.append('status', selectedStatus);
+      }
+      
+      if (startDate) {
+        params.append('startDate', startDate.toISOString().split('T')[0]);
+      }
+      
+      if (endDate) {
+        params.append('endDate', endDate.toISOString().split('T')[0]);
+      }
+      
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+      
+      const apiUrl = `${Base_url}commissions?${params.toString()}`;
+      console.log('Commissions API URL:', apiUrl);
+      console.log('Search Query:', searchQuery);
+      
+      const response = await axios.get(apiUrl, {
         headers: {
           Authorization: `Bearer ${token}`,
         }
@@ -302,14 +345,25 @@ const Commissions = () => {
     ]
   }));
 
-  const customFilters = [
-    { label: 'Status', value: 'status' }
+  const statusFilterOptions = [
+    { value: '', label: 'All Status' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'paid', label: 'Paid' },
+    { value: 'cancelled', label: 'Cancelled' }
   ];
 
-  const handleFilterChange = (filterType: string, value: string) => {
-    if (filterType === 'status') {
-      setStatusFilter(value);
-    }
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const clearFilters = () => {
+    setSelectedStatus('');
+    setStartDate(null);
+    setEndDate(null);
+    setSearchQuery('');
+    setCurrentPage(1);
   };
 
   return (
@@ -322,7 +376,69 @@ const Commissions = () => {
           <div className="box">
             <div className="box-header">
               <h5 className="box-title">Commissions List</h5>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="ti-btn ti-btn-secondary !py-1 !px-2 !text-[0.75rem]"
+                >
+                  <i className="ri-filter-line font-semibold align-middle"></i> Filters
+                </button>
+              </div>
             </div>
+            
+            {/* Filters Section */}
+            {showFilters && (
+              <div className="box-body border-b">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <Select
+                      value={statusFilterOptions.find(option => option.value === selectedStatus)}
+                      onChange={(selectedOption) => setSelectedStatus(selectedOption?.value || '')}
+                      options={statusFilterOptions}
+                      placeholder="Select Status"
+                      className="react-select-container"
+                      classNamePrefix="react-select"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <DatePicker
+                      selected={startDate}
+                      onChange={(date) => setStartDate(date)}
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="Select Start Date"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      maxDate={endDate || new Date()}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <DatePicker
+                      selected={endDate}
+                      onChange={(date) => setEndDate(date)}
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="Select End Date"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      minDate={startDate || undefined}
+                      maxDate={new Date()}
+                    />
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <button
+                      onClick={clearFilters}
+                      className="ti-btn ti-btn-outline-secondary !py-2 !px-4 !text-[0.75rem] w-full"
+                    >
+                      <i className="ri-refresh-line font-semibold align-middle"></i> Clear Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="box-body">
               {loading ? (
                 <div className="flex items-center justify-center py-8">
@@ -343,6 +459,8 @@ const Commissions = () => {
                     setItemsPerPage(size);
                     setCurrentPage(1); // Reset to first page when changing page size
                   }}
+                  onSearch={handleSearch}
+                  searchQuery={searchQuery}
                 />
               )}
             </div>

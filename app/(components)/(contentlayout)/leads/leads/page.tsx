@@ -80,6 +80,11 @@ const Leads = () => {
         closed: 0
     });
     const [selectedFilter, setSelectedFilter] = useState('all');
+    const [selectedStatus, setSelectedStatus] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedAgent, setSelectedAgent] = useState('');
+    const [categories, setCategories] = useState<any[]>([]);
+    const [showFilters, setShowFilters] = useState(false);
 
     // Define filters for lead statuses
     const leadFilters = [
@@ -92,11 +97,50 @@ const Leads = () => {
         { value: 'not_interested', label: 'Not Interested' }
     ];
 
+    // Status options for filter
+    const statusOptions = [
+        { value: '', label: 'All Statuses' },
+        { value: 'new', label: 'New' },
+        { value: 'contacted', label: 'Contacted' },
+        { value: 'interested', label: 'Interested' },
+        { value: 'followUp', label: 'Follow Up' },
+        { value: 'qualified', label: 'Qualified' },
+        { value: 'proposal', label: 'Proposal' },
+        { value: 'negotiation', label: 'Negotiation' },
+        { value: 'closed', label: 'Closed' },
+        { value: 'expired', label: 'Expired' },
+        { value: 'converted', label: 'Converted' },
+        { value: 'not_interested', label: 'Not Interested' }
+    ];
+
+    // Agent options for filter
+    const agentOptions = [
+        { value: '', label: 'All Agents' },
+        ...users.map(user => ({
+            value: user.id,
+            label: user.name || user.email
+        }))
+    ];
+
+    // Category options for filter
+    const categoryOptions = [
+        { value: '', label: 'All Categories' },
+        ...categories.map(category => ({
+            value: category.id,
+            label: category.name
+        }))
+    ];
+
     useEffect(() => {
         const fetchAllData = async () => {
             try {
                 setLoading(true);
-                await fetchRawLeads();
+                await Promise.all([
+                    fetchRawLeads(),
+                    fetchUsers(),
+                    fetchProducts(),
+                    fetchCategories()
+                ]);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setError('Failed to fetch data');
@@ -106,7 +150,7 @@ const Leads = () => {
         };
 
         fetchAllData();
-    }, [currentPage, itemsPerPage]);
+    }, [currentPage, itemsPerPage, selectedStatus, selectedCategory, selectedAgent]);
 
     // Update formatted leads whenever raw leads change
     useEffect(() => {
@@ -115,25 +159,42 @@ const Leads = () => {
         }
     }, [rawLeads]);
 
-    // Filter leads based on selected filter
+    // Filter leads based on selected filter and search query
     const getFilteredLeads = () => {
         let filtered = [...leads];
+        
+        // Apply frontend filter (selectedFilter)
         if (selectedFilter !== 'all') {
             filtered = filtered.filter(lead => lead.status === selectedFilter);
         }
+        
+        // Apply search query
+        if (searchQuery.trim() !== '') {
+            const searchLower = searchQuery.toLowerCase();
+            filtered = filtered.filter(lead => {
+                const agentName = lead.agentName?.toLowerCase() || '';
+                const status = lead.status?.toLowerCase() || '';
+                const product = lead.product?.toLowerCase() || '';
+                
+                return agentName.includes(searchLower) || 
+                       status.includes(searchLower) || 
+                       product.includes(searchLower);
+            });
+        }
+        
         return filtered;
     };
 
-    // Update filtered leads when filter changes
+    // Update filtered leads when filter or search changes
     useEffect(() => {
         const filtered = getFilteredLeads();
         setFilteredLeads(filtered);
         setTotalResults(filtered.length);
         setTotalPages(Math.ceil(filtered.length / itemsPerPage));
         setCurrentPage(1);
-    }, [selectedFilter, itemsPerPage]);
+    }, [selectedFilter, searchQuery, itemsPerPage]);
 
-    // Update filtered leads when filter changes
+    // Update filtered leads when leads data changes
     useEffect(() => {
         const filtered = getFilteredLeads();
         setFilteredLeads(filtered);
@@ -147,7 +208,13 @@ const Leads = () => {
             let allResults: RawLead[] = [];
             let hasMore = true;
             while (hasMore) {
-                const response = await axios.get(`${Base_url}leads?limit=100&page=${page}`, {
+                // Build query parameters for stats (without filters to get all leads for accurate stats)
+                const queryParams = new URLSearchParams({
+                    limit: '100',
+                    page: page.toString()
+                });
+
+                const response = await axios.get(`${Base_url}leads?${queryParams.toString()}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const results = response.data.results || [];
@@ -210,10 +277,43 @@ const Leads = () => {
         }
     };
 
+    const fetchCategories = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${Base_url}categories?limit=100`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            console.log('Categories data:', response.data.results);
+            setCategories(response.data.results);
+        } catch (err) {
+            console.error('Error fetching categories:', err);
+        }
+    };
+
     const fetchRawLeads = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}leads?limit=${itemsPerPage}&page=${currentPage}`, {
+            
+            // Build query parameters
+            const queryParams = new URLSearchParams({
+                limit: itemsPerPage.toString(),
+                page: currentPage.toString()
+            });
+
+            // Add filter parameters if they are selected
+            if (selectedStatus) {
+                queryParams.append('status', selectedStatus);
+            }
+            if (selectedCategory) {
+                queryParams.append('category', selectedCategory);
+            }
+            if (selectedAgent) {
+                queryParams.append('agent', selectedAgent);
+            }
+
+            const response = await axios.get(`${Base_url}leads?${queryParams.toString()}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -508,6 +608,13 @@ const Leads = () => {
                                     <i className="ri-delete-bin-line me-2"></i>{" "}
                                     {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
                                 </button> : null}
+                                <button
+                                    type="button"
+                                    className="ti-btn ti-btn-secondary"
+                                    onClick={() => setShowFilters(!showFilters)}
+                                >
+                                    <i className="ri-filter-line me-2"></i> Filters
+                                </button>
                                 <button 
                                     type="button" 
                                     className="ti-btn ti-btn-primary"
@@ -518,6 +625,57 @@ const Leads = () => {
                                 </button>
                             </div>
                         </div>
+                        
+                        {/* Filter Section */}
+                        {showFilters && (
+                            <div className="box-body border-b">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="form-label">Filter by Status</label>
+                                        <Select
+                                            options={statusOptions}
+                                            value={statusOptions.find(option => option.value === selectedStatus)}
+                                            onChange={(option) => setSelectedStatus(option?.value || '')}
+                                            placeholder="Select Status"
+                                            isClearable
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Filter by Category</label>
+                                        <Select
+                                            options={categoryOptions}
+                                            value={categoryOptions.find(option => option.value === selectedCategory)}
+                                            onChange={(option) => setSelectedCategory(option?.value || '')}
+                                            placeholder="Select Category"
+                                            isClearable
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Filter by Agent</label>
+                                        <Select
+                                            options={agentOptions}
+                                            value={agentOptions.find(option => option.value === selectedAgent)}
+                                            onChange={(option) => setSelectedAgent(option?.value || '')}
+                                            placeholder="Select Agent"
+                                            isClearable
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex gap-2">
+                                    <button 
+                                        type="button" 
+                                        className="ti-btn ti-btn-primary"
+                                        onClick={() => {
+                                            setSelectedStatus('');
+                                            setSelectedCategory('');
+                                            setSelectedAgent('');
+                                        }}
+                                    >
+                                        <i className="ri-refresh-line me-2"></i> Clear Filters
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         <div className="box-body">
                             {loading ? (
                                 <div className="text-center py-4">Loading leads...</div>
