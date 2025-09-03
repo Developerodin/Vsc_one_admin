@@ -54,6 +54,10 @@ const Category = () => {
   const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   const tabs = [
     { name: "General Information", icon: "ri-information-line" },
@@ -63,7 +67,7 @@ const Category = () => {
 
   useEffect(() => {
     fetchCategories();
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, selectedType, selectedStatus, nameFilter]);
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -121,8 +125,26 @@ const Category = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        limit: itemsPerPage.toString(),
+        page: currentPage.toString()
+      });
+
+      // Add filter parameters if they are selected
+      if (selectedType) {
+        queryParams.append('type', selectedType);
+      }
+      if (selectedStatus) {
+        queryParams.append('status', selectedStatus);
+      }
+      if (nameFilter) {
+        queryParams.append('name', nameFilter);
+      }
+
       const response = await axios.get(
-        `${Base_url}categories?limit=${itemsPerPage}&page=${currentPage}`,
+        `${Base_url}categories?${queryParams.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -406,6 +428,19 @@ const Category = () => {
     { value: "banking", label: "Banking" },
   ];
 
+  // Filter options
+  const typeFilterOptions = [
+    { value: '', label: 'All Types' },
+    { value: 'insurance', label: 'Insurance' },
+    { value: 'banking', label: 'Banking' }
+  ];
+
+  const statusFilterOptions = [
+    { value: '', label: 'All Statuses' },
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' }
+  ];
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
@@ -470,6 +505,13 @@ const Category = () => {
                   <i className="ri-delete-bin-line me-2"></i>{" "}
                   {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
                 </button> : null}
+                <button
+                  type="button"
+                  className="ti-btn ti-btn-secondary"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <i className="ri-filter-line me-2"></i> Filters
+                </button>
                 <button
                   type="button"
                   className="ti-btn ti-btn-primary"
@@ -664,6 +706,58 @@ const Category = () => {
                 </div>
               </div>
             </div>
+            
+            {/* Filter Section */}
+            {showFilters && (
+              <div className="box-body border-b">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="form-label">Filter by Type</label>
+                    <Select
+                      options={typeFilterOptions}
+                      value={typeFilterOptions.find(option => option.value === selectedType)}
+                      onChange={(option) => setSelectedType(option?.value || '')}
+                      placeholder="Select Type"
+                      isClearable
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Filter by Status</label>
+                    <Select
+                      options={statusFilterOptions}
+                      value={statusFilterOptions.find(option => option.value === selectedStatus)}
+                      onChange={(option) => setSelectedStatus(option?.value || '')}
+                      placeholder="Select Status"
+                      isClearable
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Filter by Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={nameFilter}
+                      onChange={(e) => setNameFilter(e.target.value)}
+                      placeholder="Enter category name"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button 
+                    type="button" 
+                    className="ti-btn ti-btn-primary"
+                    onClick={() => {
+                      setSelectedType('');
+                      setSelectedStatus('');
+                      setNameFilter('');
+                    }}
+                  >
+                    <i className="ri-refresh-line me-2"></i> Clear Filters
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <div className="box-body">
               <DataTable 
                 headers={headers} 
@@ -688,7 +782,6 @@ const Category = () => {
                 sortDirection={sortDirection}
                 onSearch={handleSearch}
                 searchQuery={searchQuery}
-                searchPlaceholder="Search by category or subcategory name..."
               />
             </div>
           </div>

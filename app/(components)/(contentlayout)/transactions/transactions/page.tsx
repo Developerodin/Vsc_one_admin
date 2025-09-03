@@ -53,22 +53,49 @@ const Transactions = () => {
     const [startDate, setStartDate] = useState<Date | null>(new Date());
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResults, setTotalResults] = useState(0);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [sortKey, setSortKey] = useState<string>('');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
         fetchTransactions();
-    }, []);
+    }, [currentPage, itemsPerPage]);
 
     const fetchTransactions = async () => {
         try {
+            setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${Base_url}transactions`, {
+            const response = await axios.get(`${Base_url}transactions?limit=${itemsPerPage}&page=${currentPage}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
-            setTransactions(response.data.results);
+            
+            // Handle both paginated and non-paginated responses
+            if (response.data.results) {
+                setTransactions(response.data.results);
+                setTotalPages(response.data.totalPages || 1);
+                setTotalResults(response.data.totalResults || response.data.results.length);
+            } else if (Array.isArray(response.data)) {
+                // Handle non-paginated response
+                setTransactions(response.data);
+                setTotalPages(1);
+                setTotalResults(response.data.length);
+            } else {
+                setTransactions([]);
+                setTotalPages(1);
+                setTotalResults(0);
+            }
         } catch (error) {
             console.error('Error fetching transactions:', error);
+            setTransactions([]);
+            setTotalPages(1);
+            setTotalResults(0);
         } finally {
             setLoading(false);
         }
@@ -76,6 +103,15 @@ const Transactions = () => {
 
     const handleDateChange = (date: Date | null) => {
         setStartDate(date);
+    };
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+    };
+
+    const handleSort = (key: string, direction: 'asc' | 'desc') => {
+        setSortKey(key);
+        setSortDirection(direction);
     };
 
     const StatusOptions = [
@@ -102,6 +138,7 @@ const Transactions = () => {
 
     const formatTableData = (transactions: Transaction[]) => {
         return transactions.map((transaction, index) => ({
+            id: transaction._id,
             srNo: index + 1,
             agentName: transaction.reference?.id || 'N/A',
             type: transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1),
@@ -169,7 +206,24 @@ const Transactions = () => {
                             {loading ? (
                                 <div className="text-center py-4">Loading...</div>
                             ) : (
-                                <DataTable headers={headers} data={formatTableData(transactions)} />
+                                <DataTable 
+                                    headers={headers} 
+                                    data={formatTableData(transactions)}
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    totalItems={totalResults}
+                                    itemsPerPage={itemsPerPage}
+                                    onItemsPerPageChange={setItemsPerPage}
+                                    onSearch={handleSearch}
+                                    searchQuery={searchQuery}
+                                    showCheckbox={true}
+                                    selectedIds={selectedIds}
+                                    onSelectionChange={setSelectedIds}
+                                    onSort={handleSort}
+                                    sortKey={sortKey}
+                                    sortDirection={sortDirection}
+                                />
                             )}
                         </div>
                     </div>
