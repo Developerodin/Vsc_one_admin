@@ -34,6 +34,133 @@ interface DashboardStats {
   };
 }
 
+interface MonthlyLeadStats {
+  year: number;
+  totalLeads: number;
+  averageLeadsPerMonth: number;
+  monthlyData: Array<{
+    month: number;
+    monthName: string;
+    year: number;
+    count: number;
+    leads: Array<{
+      id: string;
+      status: string;
+      source: string;
+      createdAt: string;
+    }>;
+  }>;
+  summary: {
+    highestMonth: {
+      month: number;
+      monthName: string;
+      count: number;
+    };
+    lowestMonth: {
+      month: number;
+      monthName: string;
+      count: number;
+    };
+  };
+  statusBreakdown: Array<{
+    _id: string;
+    count: number;
+  }>;
+  sourceBreakdown: Array<{
+    _id: string;
+    count: number;
+  }>;
+  generatedAt: string;
+}
+
+interface ProductStats {
+  totalProducts: number;
+  pieChartData: {
+    byType: {
+      title: string;
+      data: Array<{
+        name: string;
+        value: number;
+        percentage: number;
+      }>;
+      total: number;
+    };
+    byStatus: {
+      title: string;
+      data: Array<{
+        name: string;
+        value: number;
+        percentage: number;
+      }>;
+      total: number;
+    };
+    byCategory: {
+      title: string;
+      data: Array<{
+        name: string;
+        categoryId: string;
+        value: number;
+        percentage: number;
+      }>;
+      total: number;
+    };
+  };
+  additionalStats: {
+    averagePrice: number;
+    minPrice: number;
+    maxPrice: number;
+    totalValue: number;
+  };
+  generatedAt: string;
+}
+
+interface RandomUser {
+  _id: string;
+  name: string;
+  email: string;
+  mobileNumber: string;
+  role: string;
+  status: string;
+  onboardingStatus: string;
+  kycStatus: string;
+  isEmailVerified: boolean;
+  isMobileVerified: boolean;
+  totalLeads: number;
+  totalCommissions: number;
+  totalBankAccounts: number;
+  lastLeadDate: string;
+  lastCommissionDate: string;
+  performanceScore: number;
+  createdAt: string;
+  lastLogin: string;
+  profilePicture?: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  };
+}
+
+interface RandomUsersResponse {
+  users: RandomUser[];
+  summary: {
+    totalUsers: number;
+    returnedUsers: number;
+    averageLeads: number;
+    averageCommissions: number;
+    topPerformer: {
+      name: string;
+      performanceScore: number;
+      totalLeads: number;
+      totalCommissions: number;
+    };
+  };
+  generatedAt: string;
+  message: string;
+}
+
 interface Lead {
   id: string;
   srNo: number;
@@ -51,15 +178,29 @@ interface Lead {
 
 const Analytics = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [monthlyLeadStats, setMonthlyLeadStats] = useState<MonthlyLeadStats | null>(null);
+  const [productStats, setProductStats] = useState<ProductStats | null>(null);
+  const [randomUsers, setRandomUsers] = useState<RandomUser[]>([]);
+  const [randomUsersSummary, setRandomUsersSummary] = useState<RandomUsersResponse['summary'] | null>(null);
+  const [topCategories, setTopCategories] = useState<any[]>([]);
+  const [topCategoriesSummary, setTopCategoriesSummary] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [productChartError, setProductChartError] = useState<string | null>(null);
+  const [randomUsersError, setRandomUsersError] = useState<string | null>(null);
+  const [topCategoriesError, setTopCategoriesError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardStats();
     fetchLeads();
+    fetchMonthlyLeadStats();
+    fetchProductStats();
+    fetchRandomUsers();
+    fetchTopCategories();
   }, []);
 
   const fetchDashboardStats = async () => {
@@ -92,6 +233,73 @@ const Analytics = () => {
     }
   };
 
+  const fetchMonthlyLeadStats = async () => {
+    try {
+      setChartError(null);
+      const token = localStorage.getItem("token");
+      const currentYear = new Date().getFullYear();
+      const response = await axios.get(`${Base_url}leads/stats/monthly?year=${currentYear}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setMonthlyLeadStats(response.data);
+    } catch (error) {
+      console.error("Error fetching monthly lead stats:", error);
+      setChartError("Failed to load lead statistics");
+    }
+  };
+
+  const fetchProductStats = async () => {
+    try {
+      setProductChartError(null);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}products/stats/pie-chart`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setProductStats(response.data);
+    } catch (error) {
+      console.error("Error fetching product stats:", error);
+      setProductChartError("Failed to load product statistics");
+    }
+  };
+
+  const fetchRandomUsers = async () => {
+    try {
+      setRandomUsersError(null);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}users/random?limit=5`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setRandomUsers(response.data.users);
+      setRandomUsersSummary(response.data.summary);
+    } catch (error) {
+      console.error("Error fetching random users:", error);
+      setRandomUsersError("Failed to load user data");
+    }
+  };
+
+  const fetchTopCategories = async () => {
+    try {
+      setTopCategoriesError(null);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}categories/top?limit=5`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setTopCategories(response.data.categories);
+      setTopCategoriesSummary(response.data.summary);
+    } catch (error) {
+      console.error("Error fetching top categories:", error);
+      setTopCategoriesError("Failed to load top categories data");
+    }
+  };
+
   const headers = [
     { key: "agentName", label: "Submitted By", sortable: true },
     { key: "product", label: "Product", sortable: false },
@@ -113,6 +321,155 @@ const Analytics = () => {
       default:
         return "secondary";
     }
+  };
+
+  const getLeadReportChartData = () => {
+    if (!monthlyLeadStats) {
+      return {
+        options: {
+                  chart: {
+          type: 'line' as const,
+          height: 257,
+          toolbar: {
+            show: false
+          }
+        },
+          stroke: {
+            curve: 'smooth' as const,
+            width: 3
+          },
+          xaxis: {
+            categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+          },
+          yaxis: {
+            title: {
+              text: 'Number of Leads'
+            }
+          },
+          colors: ['#3b82f6'],
+          dataLabels: {
+            enabled: false
+          },
+          grid: {
+            borderColor: '#f1f5f9'
+          }
+        },
+        series: [{
+          name: 'Leads',
+          data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        }]
+      };
+    }
+
+    const monthlyData = monthlyLeadStats.monthlyData;
+    const leadCounts = Array.from({ length: 12 }, (_, index) => {
+      const monthData = monthlyData.find(data => data.month === index + 1);
+      return monthData ? monthData.count : 0;
+    });
+
+    return {
+      options: {
+        chart: {
+          type: 'line' as const,
+          height: 257,
+          toolbar: {
+            show: false
+          }
+        },
+        stroke: {
+          curve: 'smooth' as const,
+          width: 3
+        },
+        xaxis: {
+          categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        },
+        yaxis: {
+          title: {
+            text: 'Number of Leads'
+          }
+        },
+        colors: ['#3b82f6'],
+        dataLabels: {
+          enabled: false
+        },
+        grid: {
+          borderColor: '#f1f5f9'
+        },
+      },
+      series: [{
+        name: 'Leads',
+        data: leadCounts
+      }]
+    };
+  };
+
+  const getProductSegregationChartData = () => {
+    if (!productStats) {
+      return {
+        options: {
+          chart: {
+            type: 'donut' as const,
+            height: 250,
+            toolbar: {
+              show: false
+            }
+          },
+          labels: ['No Data'],
+          colors: ['#e5e7eb'],
+          dataLabels: {
+            enabled: false
+          },
+          legend: {
+            position: 'bottom' as const
+          }
+        },
+        series: [100]
+      };
+    }
+
+    const byTypeData = productStats.pieChartData.byType;
+    const labels = byTypeData.data.map(item => item.name.charAt(0).toUpperCase() + item.name.slice(1));
+    const series = byTypeData.data.map(item => item.value);
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+    return {
+      options: {
+        chart: {
+          type: 'donut' as const,
+          height: 250,
+          toolbar: {
+            show: false
+          }
+        },
+        labels: labels,
+        colors: colors.slice(0, labels.length),
+        dataLabels: {
+          enabled: false
+        },
+        legend: {
+          position: 'bottom' as const,
+          fontSize: '12px'
+        },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '60%',
+              labels: {
+                show: true,
+                total: {
+                  show: true,
+                  label: 'Products',
+                  formatter: function () {
+                    return byTypeData.total.toString()
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      series: series
+    };
   };
 
   return (
@@ -198,31 +555,46 @@ const Analytics = () => {
             <div className="xl:col-span-12 col-span-12">
               <div className="box">
                 <div className="box-header justify-between">
-                  <div className="box-title">Audience Report</div>
+                  <div className="box-title">Lead Report</div>
                   <div>
                     <button
                       type="button"
                       className="ti-btn ti-btn-primary ti-btn-wave !font-medium"
+                      onClick={fetchMonthlyLeadStats}
                     >
-                      <i className="ri-share-forward-line me-1 align-middle inline-block"></i>
-                      Export
+                      <i className="ri-refresh-line me-1 align-middle inline-block"></i>
+                      Refresh
                     </button>
                   </div>
                 </div>
                 <div className="box-body">
-                  <div id="audienceReport">
-                    <ReactApexChart
-                      options={Analyticsdata.AudienceReport.options}
-                      series={Analyticsdata.AudienceReport.series}
-                      type="line"
-                      width={"100%"}
-                      height={257}
-                    />
-                  </div>
+                  {chartError ? (
+                    <div className="text-center text-danger py-4">
+                      <i className="ri-error-warning-line text-2xl mb-2"></i>
+                      <p>{chartError}</p>
+                      <button
+                        type="button"
+                        className="ti-btn ti-btn-primary ti-btn-sm mt-2"
+                        onClick={fetchMonthlyLeadStats}
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  ) : (
+                    <div id="leadReport">
+                      <ReactApexChart
+                        options={getLeadReportChartData().options}
+                        series={getLeadReportChartData().series}
+                        type="line"
+                        width={"100%"}
+                        height={257}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="xxl:col-span-6 xl:col-span-12 col-span-12">
+            {/* <div className="xxl:col-span-6 xl:col-span-12 col-span-12">
               <div className="box">
                 <div className="box-header justify-between">
                   <div className="box-title">
@@ -517,7 +889,7 @@ const Analytics = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="xl:col-span-5 col-span-12">
@@ -525,74 +897,46 @@ const Analytics = () => {
             <div className="xl:col-span-12 col-span-12">
               <div className="box">
                 <div className="box-header justify-between">
-                  <div className="box-title">Revenue Segregation</div>
+                  <div className="box-title">Product Segregation</div>
                   <div>
                     <button
                       type="button"
-                      className="ti-btn ti-btn-primary 1 !text-[0.85rem] !m-0 !font-medium"
+                      className="ti-btn ti-btn-primary !text-[0.85rem] !m-0 !font-medium"
+                      onClick={fetchProductStats}
                     >
-                      View All
+                      <i className="ri-refresh-line me-1"></i>
+                      Refresh
                     </button>
                   </div>
                 </div>
-                <div className="box-body !my-2 !py-6 !px-2">
-                  <div id="sessions">
-                    <ReactApexChart
-                      options={Analyticsdata.Sessionbydevice.options}
-                      series={Analyticsdata.Sessionbydevice.series}
-                      type="donut"
-                      width={"100%"}
-                      height={250}
-                    />
-                  </div>
-                </div>
-                <div className="box-footer !p-0">
-                  <div className="grid grid-cols-12 justify-center">
-                    <div className="col-span-3 pe-0 text-center">
-                      <div className="sm:p-4  p-2 ">
-                        <span className="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">
-                          Mobile
-                        </span>
-                        <span className="block text-[1rem] font-semibold">
-                          68.3%
-                        </span>
-                      </div>
+                <div className="box-body !my-2 !py-6 !px-2" style={{ minHeight: '440px' }}>
+                  {productChartError ? (
+                    <div className="text-center text-danger py-4">
+                      <i className="ri-error-warning-line text-2xl mb-2"></i>
+                      <p>{productChartError}</p>
+                      <button
+                        type="button"
+                        className="ti-btn ti-btn-primary ti-btn-sm mt-2"
+                        onClick={fetchProductStats}
+                      >
+                        Try Again
+                      </button>
                     </div>
-                    <div className="col-span-3 px-0 text-center">
-                      <div className="sm:p-4 p-2">
-                        <span className="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">
-                          Tablet
-                        </span>
-                        <span className="block text-[1rem] font-semibold">
-                          17.68%
-                        </span>
-                      </div>
+                  ) : (
+                    <div id="productSegregation" className="flex items-center justify-center h-full">
+                      <ReactApexChart
+                        options={getProductSegregationChartData().options}
+                        series={getProductSegregationChartData().series}
+                        type="donut"
+                        width={"100%"}
+                        height={400}
+                      />
                     </div>
-                    <div className="col-span-3 px-0 text-center">
-                      <div className="sm:p-4 p-2 ">
-                        <span className="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">
-                          Desktop
-                        </span>
-                        <span className="block text-[1rem] font-semibold">
-                          10.5%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="col-span-3 px-0 text-center">
-                      <div className="sm:p-4 p-2">
-                        <span className="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">
-                          Others
-                        </span>
-                        <span className="block text-[1rem] font-semibold">
-                          5.16%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="xl:col-span-12 col-span-12">
+            {/* <div className="xl:col-span-12 col-span-12">
               <div className="box">
                 <div className="box-header justify-between">
                   <div className="box-title">
@@ -654,10 +998,118 @@ const Analytics = () => {
                   </div>
                 </div>
               </div>
+            </div> */}
+          </div>
+        </div>
+      </div>
+      
+      {/* Top 5 Users Table - Full Width */}
+      <div className="grid grid-cols-12 gap-x-6">
+        <div className="col-span-12">
+          <div className="box">
+            <div className="box-header justify-between">
+              <div className="box-title">Top 5 Users</div>
+              <div>
+                <button
+                  type="button"
+                  className="ti-btn ti-btn-primary ti-btn-wave !font-medium"
+                  onClick={fetchRandomUsers}
+                >
+                  <i className="ri-refresh-line me-1 align-middle inline-block"></i>
+                  Refresh
+                </button>
+              </div>
+            </div>
+            <div className="box-body">
+              {randomUsersError ? (
+                <div className="text-center text-danger py-4">
+                  <i className="ri-error-warning-line text-2xl mb-2"></i>
+                  <p>{randomUsersError}</p>
+                  <button
+                    type="button"
+                    className="ti-btn ti-btn-primary ti-btn-sm mt-2"
+                    onClick={fetchRandomUsers}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover whitespace-nowrap table-bordered min-w-full">
+                    <thead>
+                      <tr>
+                        <th scope="col" className="text-start">S.No</th>
+                        <th scope="col" className="text-start">User</th>
+                        <th scope="col" className="text-start">Email</th>
+                        <th scope="col" className="text-start">Mobile</th>
+                        <th scope="col" className="text-start">Total Leads</th>
+                        <th scope="col" className="text-start">Total Commissions</th>
+                        <th scope="col" className="text-start">Performance Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {randomUsers.map((user, index) => (
+                        <tr
+                          className="border-t border-inherit border-solid hover:bg-gray-100 dark:hover:bg-light dark:border-defaultborder/10"
+                          key={user._id}
+                        >
+                          <th scope="row" className="!text-start">
+                            {index + 1}
+                          </th>
+                          <td>
+                            <div className="flex items-center">
+                              <span className="avatar avatar-sm !mb-0 bg-primary/10 avatar-rounded">
+                                {user.profilePicture ? (
+                                  <img
+                                    src={user.profilePicture}
+                                    alt={user.name}
+                                    className="!rounded-full h-[1.75rem] w-[1.75rem]"
+                                  />
+                                ) : (
+                                  <i className="ri-user-3-line text-[0.9375rem] font-semibold text-primary"></i>
+                                )}
+                              </span>
+                              <span className="ms-2 font-semibold">
+                                {user.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="text-[0.875rem]">
+                              {user.email}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="text-[0.875rem]">
+                              {user.mobileNumber}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="font-semibold text-primary">
+                              {user.totalLeads}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="font-semibold text-success">
+                              ₹{user.totalCommissions.toLocaleString()}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="font-semibold text-info">
+                              {user.performanceScore}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
+      
       <div className="grid grid-cols-12 gap-x-6">
         <div className="xl:col-span-9 col-span-12">
           <div className="box">
@@ -811,200 +1263,53 @@ const Analytics = () => {
           <div className="box">
             <div className="box-header justify-between">
               <div className="box-title">Top Performing Categories</div>
-              <div className="hs-dropdown ti-dropdown">
-                <Link
-                  href="#!"
-                  scroll={false}
-                  className="px-2 font-normal text-[0.75rem] text-[#8c9097] dark:text-white/50"
-                  aria-expanded="false"
-                >
-                  View All
-                  <i className="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
-                </Link>
-                <ul
-                  className="hs-dropdown-menu ti-dropdown-menu hidden"
-                  role="menu"
-                >
-                  <li>
-                    <Link
-                      className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block"
-                      href="#!"
-                      scroll={false}
-                    >
-                      Today
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block"
-                      href="#!"
-                      scroll={false}
-                    >
-                      This Week
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      className="ti-dropdown-item !py-2 !px-[0.9375rem] !text-[0.8125rem] !font-medium block"
-                      href="#!"
-                      scroll={false}
-                    >
-                      Last Week
-                    </Link>
-                  </li>
-                </ul>
-              </div>
+              
             </div>
             <div className="box-body">
-              <ul className="list-none mb-0 analytics-visitors-countries min-w-full">
-                <li>
-                  <div className="flex items-center">
-                    <div className="leading-none">
-                      <span className="avatar avatar-sm !mb-0 text-default">
-                        <img
-                          src="../../assets/images/flags/us_flag.jpg"
-                          alt=""
-                          className="!rounded-full h-[1.75rem] w-[1.75rem]"
-                        />
-                      </span>
-                    </div>
-                    <div className="ms-4 flex-grow leading-none">
-                      <span className="text-[0.75rem]">United States</span>
-                    </div>
-                    <div>
-                      <span className="text-default badge bg-light font-semibold mt-2">
-                        32,190
-                      </span>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="flex items-center">
-                    <div className="leading-none">
-                      <span className="avatar avatar-sm !mb-0 avatar-rounded text-default">
-                        <img
-                          src="../../assets/images/flags/germany_flag.jpg"
-                          alt=""
-                          className="!rounded-full h-[1.75rem] w-[1.75rem]"
-                        />
-                      </span>
-                    </div>
-                    <div className="ms-4 flex-grow leading-none">
-                      <span className="text-[0.75rem]">Germany</span>
-                    </div>
-                    <div>
-                      <span className="text-default badge bg-light font-semibold mt-2">
-                        8,798
-                      </span>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="flex items-center">
-                    <div className="leading-none">
-                      <span className="avatar avatar-sm !mb-0 avatar-rounded text-default">
-                        <img
-                          src="../../assets/images/flags/mexico_flag.jpg"
-                          alt=""
-                          className="!rounded-full h-[1.75rem] w-[1.75rem]"
-                        />
-                      </span>
-                    </div>
-                    <div className="ms-4 flex-grow leading-none">
-                      <span className="text-[0.75rem]">Mexico</span>
-                    </div>
-                    <div>
-                      <span className="text-default badge bg-light font-semibold mt-2">
-                        16,885
-                      </span>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="flex items-center">
-                    <div className="leading-none">
-                      <span className="avatar avatar-sm !mb-0 avatar-rounded text-default">
-                        <img
-                          src="../../assets/images/flags/uae_flag.jpg"
-                          alt=""
-                          className="!rounded-full h-[1.75rem] w-[1.75rem]"
-                        />
-                      </span>
-                    </div>
-                    <div className="ms-4 flex-grow leading-none">
-                      <span className="text-[0.75rem]">Uae</span>
-                    </div>
-                    <div>
-                      <span className="text-default badge bg-light font-semibold mt-2">
-                        14,885
-                      </span>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="flex items-center">
-                    <div className="leading-none">
-                      <span className="avatar avatar-sm !mb-0 avatar-rounded text-default">
-                        <img
-                          src="../../assets/images/flags/argentina_flag.jpg"
-                          alt=""
-                          className="!rounded-full h-[1.75rem] w-[1.75rem]"
-                        />
-                      </span>
-                    </div>
-                    <div className="ms-4 flex-grow leading-none">
-                      <span className="text-[0.75rem]">Argentina</span>
-                    </div>
-                    <div>
-                      <span className="text-default badge bg-light font-semibold mt-2">
-                        17,578
-                      </span>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="flex items-center">
-                    <div className="leading-none">
-                      <span className="avatar avatar-sm !mb-0 avatar-rounded text-default">
-                        <img
-                          src="../../assets/images/flags/russia_flag.jpg"
-                          alt=""
-                          className="!rounded-full h-[1.75rem] w-[1.75rem]"
-                        />
-                      </span>
-                    </div>
-                    <div className="ms-4 flex-grow leading-none">
-                      <span className="text-[0.75rem]">Russia</span>
-                    </div>
-                    <div>
-                      <span className="text-default badge bg-light font-semibold mt-2">
-                        10,118
-                      </span>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="flex items-center">
-                    <div className="leading-none">
-                      <span className="avatar avatar-sm !mb-0 avatar-rounded text-default">
-                        <img
-                          src="../../assets/images/flags/china_flag.jpg"
-                          alt=""
-                          className="!rounded-full h-[1.75rem] w-[1.75rem]"
-                        />
-                      </span>
-                    </div>
-                    <div className="ms-4 flex-grow leading-none">
-                      <span className="text-[0.75rem]">China</span>
-                    </div>
-                    <div>
-                      <span className="text-default badge bg-light font-semibold mt-2">
-                        6,578
-                      </span>
-                    </div>
-                  </div>
-                </li>
-              </ul>
+              {topCategoriesError ? (
+                <div className="text-center text-danger py-4">
+                  <i className="ri-error-warning-line text-2xl mb-2"></i>
+                  <p>{topCategoriesError}</p>
+                  <button
+                    type="button"
+                    className="ti-btn ti-btn-primary ti-btn-sm mt-2"
+                    onClick={fetchTopCategories}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : (
+                <ul className="list-none mb-0 analytics-visitors-countries min-w-full">
+                  {topCategories.length > 0 ? (
+                    topCategories.map((category, index) => (
+                      <li key={category._id || index}>
+                        <div className="flex items-center">
+                          <div className="leading-none">
+                            <span className="avatar avatar-sm !mb-0 text-default">
+                              <i className="ri-folder-line text-primary text-lg"></i>
+                            </span>
+                          </div>
+                          <div className="ms-4 flex-grow leading-none">
+                            <span className="text-[0.75rem] font-medium">{category.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-default badge bg-light font-semibold mt-2">
+                              {category.leadCount || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    ))
+                  ) : (
+                    <li>
+                      <div className="text-center text-muted py-4">
+                        <i className="ri-folder-open-line text-2xl mb-2"></i>
+                        <p className="text-sm">No categories found</p>
+                      </div>
+                    </li>
+                  )}
+                </ul>
+              )}
             </div>
           </div>
         </div>

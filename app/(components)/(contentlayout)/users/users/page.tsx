@@ -33,42 +33,30 @@ const Users = () => {
     fetchUsers();
   }, [currentPage, itemsPerPage]);
 
+  // Reset to first page when search query changes
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredUsers(users);
-      setTotalResults(users.length);
-      setTotalPages(Math.ceil(users.length / itemsPerPage));
-    } else {
-      const filtered = users.filter(user => {
-        const userName = user.name.props.children[0].props.children.toLowerCase();
-        return userName.includes(searchQuery.toLowerCase());
-      });
-      setFilteredUsers(filtered);
-      setTotalResults(filtered.length);
-      setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    if (searchQuery !== '') {
+      setCurrentPage(1);
     }
-    setCurrentPage(1); // Reset to first page when filtering
   }, [searchQuery]);
-
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter(user => {
-        const userName = user.name.props.children[0].props.children.toLowerCase();
-        return userName.includes(searchQuery.toLowerCase());
-      });
-      setFilteredUsers(filtered);
-      setTotalResults(filtered.length);
-      setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-    }
-  }, [users]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${Base_url}users?limit=${itemsPerPage}&page=${currentPage}`, {
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        limit: itemsPerPage.toString(),
+        page: currentPage.toString()
+      });
+
+      // Add search parameter if search query exists
+      if (searchQuery.trim()) {
+        queryParams.append('search', searchQuery.trim());
+      }
+
+      const response = await axios.get(`${Base_url}users?${queryParams.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -104,7 +92,6 @@ const Users = () => {
             <span className="text-xs text-gray-500">{user.email || "--"}</span>
           </div>
         ),
-        totalCommission: user.totalCommission || "--",
         address: user.address?.country || "--",
         createdDate: new Date(user.createdAt).toLocaleDateString('en-GB', {
           day: 'numeric',
@@ -133,8 +120,8 @@ const Users = () => {
 
       setUsers(formattedData);
       setFilteredUsers(formattedData);
-      setTotalPages(response.data.totalPages);
-      setTotalResults(response.data.totalResults);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalResults(response.data.totalResults || formattedData.length);
     } catch (error) {
       setError("Failed to fetch users");
       console.error("Error fetching users:", error);
@@ -263,7 +250,6 @@ const Users = () => {
       'Name': user.name.props.children[0].props.children,
       'Mobile Number': user.contact.props.children[0].props.children,
       'Email': user.contact.props.children[1].props.children,
-      'Total Commission': user.totalCommission,
       'Address': user.address,
       'Created Date': user.createdDate
     }));
@@ -283,11 +269,21 @@ const Users = () => {
     setSearchQuery(value);
   };
 
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== undefined) {
+        fetchUsers();
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   const headers = [
     { key: "profile", label: "Profile", sortable: false },
     { key: "name", label: "Name", sortable: true },
     { key: "contact", label: "Contact", sortable: false },
-    { key: "totalCommission", label: "Total Commission", sortable: true },
     { key: "address", label: "Address", sortable: false },
     { key: "createdDate", label: "Created Date", sortable: true },
     { key: "actions", label: "Actions", sortable: false },
