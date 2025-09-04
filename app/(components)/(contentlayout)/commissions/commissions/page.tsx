@@ -153,6 +153,20 @@ const Commissions = () => {
   const [exportEndDate, setExportEndDate] = useState<Date | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
 
+  // Custom input component for DatePicker to ensure calendar opens on click
+  const CustomDateInput = ({ value, onClick, placeholder }: any) => (
+    <input
+      value={value}
+      onClick={(e) => {
+        console.log('CustomDateInput clicked:', { value, placeholder, event: e });
+        onClick(e);
+      }}
+      placeholder={placeholder}
+      readOnly
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+    />
+  );
+
   useEffect(() => {
     fetchCommissions();
   }, [currentPage, itemsPerPage, selectedStatus, startDate, endDate]);
@@ -524,7 +538,7 @@ const Commissions = () => {
       },
       {
         icon: 'ri-bank-line',
-        className: 'ti-btn-info',
+          className: 'ti-btn-info',
         onClick: () => handleSelectBankAccount(commission),
         title: 'Select Bank Account'
       }
@@ -579,12 +593,16 @@ const Commissions = () => {
         params.append('search', searchQuery.trim());
       }
       
-      // Apply export date filters if provided
+      // Apply export date filters if provided (override current filters)
       if (exportStartDate) {
+        // Remove existing startDate if any
+        params.delete('startDate');
         params.append('startDate', formatDateForAPI(exportStartDate));
       }
       
       if (exportEndDate) {
+        // Remove existing endDate if any
+        params.delete('endDate');
         params.append('endDate', formatDateForAPI(exportEndDate));
       }
       
@@ -607,15 +625,22 @@ const Commissions = () => {
         : [];
       
       // Prepare data for Excel export
-      const exportData = validCommissions.map((commission, index) => ({
-        'S.No': index + 1,
-        'Product': commission.product?.name || 'N/A',
-        'Agent Name': commission.agent?.name || 'N/A',
-        'Agent PAN Number': commission.agent?.kycDetails?.panNumber || 'N/A',
-        'Base Amount': commission.baseAmount || 0,
-        'TDS %': commission.tdsPercentage || 0,
-        'Commission Amount': commission.amount || 0
-      }));
+      const exportData = validCommissions.map((commission, index) => {
+        const baseAmount = commission.baseAmount || 0;
+        const tdsPercentage = commission.tdsPercentage || 0;
+        const tdsAmount = (baseAmount * tdsPercentage) / 100;
+        
+        return {
+          'S.No': index + 1,
+          'Product': commission.product?.name || 'N/A',
+          'Agent Name': commission.agent?.name || 'N/A',
+          'Agent PAN Number': commission.agent?.kycDetails?.panNumber || 'N/A',
+          'Base Amount': baseAmount,
+          'TDS %': tdsPercentage,
+          'TDS Amount': tdsAmount,
+          'Commission Amount': commission.amount || 0
+        };
+      });
       
       // Create a worksheet
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -628,6 +653,7 @@ const Commissions = () => {
         { wch: 15 },  // Agent PAN Number
         { wch: 15 },  // Base Amount
         { wch: 10 },  // TDS %
+        { wch: 15 },  // TDS Amount
         { wch: 18 }   // Commission Amount
       ];
       ws['!cols'] = colWidths;
@@ -729,12 +755,16 @@ const Commissions = () => {
                   <i className="ri-filter-line font-semibold align-middle"></i> Filters
                 </button>
                 <button
-                  onClick={() => setShowExportModal(true)}
+                  onClick={() => {
+                    console.log('📤 EXPORT BUTTON clicked - opening modal');
+                    console.log('Current export dates - Start:', exportStartDate, 'End:', exportEndDate);
+                    setShowExportModal(true);
+                  }}
                   className="ti-btn ti-btn-primary !py-1 !px-2 !text-[0.75rem]"
                 >
                   <i className="ri-download-2-line font-semibold align-middle"></i> Export
                 </button>
-              </div>
+            </div>
             </div>
             
             {/* Filters Section */}
@@ -865,13 +895,13 @@ const Commissions = () => {
             
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                     Base Amount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                </label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     value={editBaseAmount}
                     onChange={(e) => setEditBaseAmount(e.target.value)}
                     min="0"
@@ -889,9 +919,9 @@ const Commissions = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     value={editTdsPercentage}
                     onChange={(e) => setEditTdsPercentage(e.target.value)}
-                    min="0"
-                    max="100"
-                    step="0.01"
+                  min="0"
+                  max="100"
+                  step="0.01"
                     placeholder="Enter TDS percentage (0-100)"
                   />
                 </div>
@@ -1353,9 +1383,12 @@ const Commissions = () => {
               <h3 className="text-lg font-semibold">Export Commissions</h3>
               <button
                 onClick={() => {
+                  console.log('❌ MODAL CLOSE (X) clicked - closing modal and clearing dates');
+                  console.log('Before close - Start:', exportStartDate, 'End:', exportEndDate);
                   setShowExportModal(false);
                   setExportStartDate(null);
                   setExportEndDate(null);
+                  console.log('After close - modal closed and dates cleared');
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -1382,18 +1415,51 @@ const Commissions = () => {
                   <DatePicker
                     selected={exportStartDate}
                     onChange={(date) => {
-                      if (date) {
-                        const adjustedDate = new Date(date);
-                        adjustedDate.setHours(12, 0, 0, 0);
-                        setExportStartDate(adjustedDate);
-                      } else {
-                        setExportStartDate(date);
-                      }
+                      console.log('🚀 START DATE onChange triggered:', {
+                        date,
+                        dateType: typeof date,
+                        isDate: date instanceof Date,
+                        timestamp: date ? date.getTime() : null,
+                        formatted: date ? date.toISOString() : null,
+                        currentExportStartDate: exportStartDate,
+                        currentExportEndDate: exportEndDate
+                      });
+                      setExportStartDate(date);
                     }}
                     dateFormat="dd/MM/yyyy"
                     placeholderText="Select Start Date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    customInput={<CustomDateInput placeholder="Select Start Date" />}
                     maxDate={exportEndDate || new Date()}
+                    isClearable
+                    showYearDropdown
+                    showMonthDropdown
+                    dropdownMode="select"
+                    autoComplete="off"
+                    onSelect={(date) => {
+                      console.log('🎯 START DATE onSelect triggered:', {
+                        date,
+                        dateType: typeof date,
+                        isDate: date instanceof Date,
+                        timestamp: date ? date.getTime() : null,
+                        formatted: date ? date.toISOString() : null
+                      });
+                      setExportStartDate(date);
+                    }}
+                    onCalendarOpen={() => {
+                      console.log('📅 START DATE calendar opened');
+                    }}
+                    onCalendarClose={() => {
+                      console.log('📅 START DATE calendar closed');
+                    }}
+                    onFocus={(e) => {
+                      console.log('👆 START DATE onFocus:', e);
+                    }}
+                    onBlur={(e) => {
+                      console.log('👆 START DATE onBlur:', e);
+                    }}
+                    onClickOutside={() => {
+                      console.log('👆 START DATE clicked outside');
+                    }}
                   />
                 </div>
                 
@@ -1404,21 +1470,73 @@ const Commissions = () => {
                   <DatePicker
                     selected={exportEndDate}
                     onChange={(date) => {
-                      if (date) {
-                        const adjustedDate = new Date(date);
-                        adjustedDate.setHours(12, 0, 0, 0);
-                        setExportEndDate(adjustedDate);
-                      } else {
-                        setExportEndDate(date);
-                      }
+                      console.log('🚀 END DATE onChange triggered:', {
+                        date,
+                        dateType: typeof date,
+                        isDate: date instanceof Date,
+                        timestamp: date ? date.getTime() : null,
+                        formatted: date ? date.toISOString() : null,
+                        currentExportStartDate: exportStartDate,
+                        currentExportEndDate: exportEndDate
+                      });
+                      setExportEndDate(date);
                     }}
                     dateFormat="dd/MM/yyyy"
                     placeholderText="Select End Date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    customInput={<CustomDateInput placeholder="Select End Date" />}
                     minDate={exportStartDate || undefined}
                     maxDate={new Date()}
+                    isClearable
+                    showYearDropdown
+                    showMonthDropdown
+                    dropdownMode="select"
+                    autoComplete="off"
+                    onSelect={(date) => {
+                      console.log('🎯 END DATE onSelect triggered:', {
+                        date,
+                        dateType: typeof date,
+                        isDate: date instanceof Date,
+                        timestamp: date ? date.getTime() : null,
+                        formatted: date ? date.toISOString() : null
+                      });
+                      setExportEndDate(date);
+                    }}
+                    onCalendarOpen={() => {
+                      console.log('📅 END DATE calendar opened');
+                    }}
+                    onCalendarClose={() => {
+                      console.log('📅 END DATE calendar closed');
+                    }}
+                    onFocus={(e) => {
+                      console.log('👆 END DATE onFocus:', e);
+                    }}
+                    onBlur={(e) => {
+                      console.log('👆 END DATE onBlur:', e);
+                    }}
+                    onClickOutside={() => {
+                      console.log('👆 END DATE clicked outside');
+                    }}
                   />
                 </div>
+                
+                {(exportStartDate || exportEndDate) && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('🧹 CLEAR DATES clicked - clearing both dates');
+                        console.log('Before clear - Start:', exportStartDate, 'End:', exportEndDate);
+                        setExportStartDate(null);
+                        setExportEndDate(null);
+                        console.log('After clear - both dates set to null');
+                      }}
+                      className="text-sm text-primary hover:text-primary-dark flex items-center"
+                    >
+                      <i className="ri-refresh-line mr-1"></i>
+                      Clear Dates
+                    </button>
+                  </div>
+                )}
               </div>
               
               <div className="bg-gray-50 p-3 rounded text-sm">
@@ -1429,6 +1547,7 @@ const Commissions = () => {
                   <li>• Agent PAN Number</li>
                   <li>• Base Amount</li>
                   <li>• TDS Percentage</li>
+                  <li>• TDS Amount (Calculated)</li>
                   <li>• Commission Amount</li>
                 </ul>
               </div>
@@ -1437,9 +1556,12 @@ const Commissions = () => {
             <div className="flex justify-end gap-3 p-4 border-t">
               <button
                 onClick={() => {
+                  console.log('❌ CANCEL BUTTON clicked - closing modal and clearing dates');
+                  console.log('Before cancel - Start:', exportStartDate, 'End:', exportEndDate);
                   setShowExportModal(false);
                   setExportStartDate(null);
                   setExportEndDate(null);
+                  console.log('After cancel - modal closed and dates cleared');
                 }}
                 className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
               >
