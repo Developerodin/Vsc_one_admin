@@ -10,6 +10,7 @@ import DataTable from '@/shared/components/DataTable';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import * as XLSX from "xlsx";
 
 
 interface BankAccount {
@@ -147,6 +148,10 @@ const Commissions = () => {
     paymentDate: '',
     paymentMethod: 'bank_transfer'
   });
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState<Date | null>(null);
+  const [exportEndDate, setExportEndDate] = useState<Date | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     fetchCommissions();
@@ -547,6 +552,111 @@ const Commissions = () => {
     setCurrentPage(1);
   };
 
+  const handleExport = async () => {
+    try {
+      setExportLoading(true);
+      const token = localStorage.getItem("token");
+      
+      // Build query parameters for export
+      const params = new URLSearchParams();
+      params.append('limit', '1000'); // Export more records
+      params.append('page', '1');
+      
+      // Apply current filters
+      if (selectedStatus) {
+        params.append('status', selectedStatus);
+      }
+      
+      if (startDate) {
+        params.append('startDate', formatDateForAPI(startDate));
+      }
+      
+      if (endDate) {
+        params.append('endDate', formatDateForAPI(endDate));
+      }
+      
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+      
+      // Apply export date filters if provided
+      if (exportStartDate) {
+        params.append('startDate', formatDateForAPI(exportStartDate));
+      }
+      
+      if (exportEndDate) {
+        params.append('endDate', formatDateForAPI(exportEndDate));
+      }
+      
+      const apiUrl = `${Base_url}commissions?${params.toString()}`;
+      console.log('Export API URL:', apiUrl);
+      
+      const response = await axios.get(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      
+      const commissionsData = Array.isArray(response.data) ? response.data : response.data.results;
+      const validCommissions = Array.isArray(commissionsData) 
+        ? commissionsData.filter(commission => 
+            commission && 
+            typeof commission === 'object' && 
+            commission.id
+          )
+        : [];
+      
+      // Prepare data for Excel export
+      const exportData = validCommissions.map((commission, index) => ({
+        'S.No': index + 1,
+        'Product': commission.product?.name || 'N/A',
+        'Agent Name': commission.agent?.name || 'N/A',
+        'Agent PAN Number': commission.agent?.kycDetails?.panNumber || 'N/A',
+        'Base Amount': commission.baseAmount || 0,
+        'TDS %': commission.tdsPercentage || 0,
+        'Commission Amount': commission.amount || 0
+      }));
+      
+      // Create a worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // Set column widths
+      const colWidths = [
+        { wch: 8 },   // S.No
+        { wch: 25 },  // Product
+        { wch: 20 },  // Agent Name
+        { wch: 15 },  // Agent PAN Number
+        { wch: 15 },  // Base Amount
+        { wch: 10 },  // TDS %
+        { wch: 18 }   // Commission Amount
+      ];
+      ws['!cols'] = colWidths;
+      
+      // Create a workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Commissions');
+      
+      // Generate filename with date range
+      const startDateStr = exportStartDate ? formatDateForAPI(exportStartDate) : 'all';
+      const endDateStr = exportEndDate ? formatDateForAPI(exportEndDate) : 'all';
+      const filename = `commissions_${startDateStr}_to_${endDateStr}.xlsx`;
+      
+      // Generate Excel file
+      XLSX.writeFile(wb, filename);
+      
+      // Close modal and reset form
+      setShowExportModal(false);
+      setExportStartDate(null);
+      setExportEndDate(null);
+      
+    } catch (error) {
+      console.error("Error exporting commissions:", error);
+      alert('Failed to export commissions data');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   return (
     <Fragment>
       <Seo title={"Commissions"} />
@@ -617,6 +727,12 @@ const Commissions = () => {
                   className="ti-btn ti-btn-secondary !py-1 !px-2 !text-[0.75rem]"
                 >
                   <i className="ri-filter-line font-semibold align-middle"></i> Filters
+                </button>
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="ti-btn ti-btn-primary !py-1 !px-2 !text-[0.75rem]"
+                >
+                  <i className="ri-download-2-line font-semibold align-middle"></i> Export
                 </button>
               </div>
             </div>
@@ -1224,6 +1340,128 @@ const Commissions = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Export Commissions</h3>
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setExportStartDate(null);
+                  setExportEndDate(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="text-sm text-gray-600 mb-4">
+                <p>Select date range for export. Leave empty to export all data.</p>
+                {selectedStatus || startDate || endDate || searchQuery.trim() ? (
+                  <p className="text-blue-600 mt-2">
+                    <i className="ri-information-line mr-1"></i>
+                    Current filters will be applied to the export.
+                  </p>
+                ) : null}
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Date (Optional)
+                  </label>
+                  <DatePicker
+                    selected={exportStartDate}
+                    onChange={(date) => {
+                      if (date) {
+                        const adjustedDate = new Date(date);
+                        adjustedDate.setHours(12, 0, 0, 0);
+                        setExportStartDate(adjustedDate);
+                      } else {
+                        setExportStartDate(date);
+                      }
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select Start Date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    maxDate={exportEndDate || new Date()}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Date (Optional)
+                  </label>
+                  <DatePicker
+                    selected={exportEndDate}
+                    onChange={(date) => {
+                      if (date) {
+                        const adjustedDate = new Date(date);
+                        adjustedDate.setHours(12, 0, 0, 0);
+                        setExportEndDate(adjustedDate);
+                      } else {
+                        setExportEndDate(date);
+                      }
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select End Date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    minDate={exportStartDate || undefined}
+                    maxDate={new Date()}
+                  />
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-3 rounded text-sm">
+                <p className="font-medium text-gray-700 mb-2">Export will include:</p>
+                <ul className="text-gray-600 space-y-1">
+                  <li>• Product Name</li>
+                  <li>• Agent Name</li>
+                  <li>• Agent PAN Number</li>
+                  <li>• Base Amount</li>
+                  <li>• TDS Percentage</li>
+                  <li>• Commission Amount</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 p-4 border-t">
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setExportStartDate(null);
+                  setExportEndDate(null);
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exportLoading}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exportLoading ? (
+                  <>
+                    <i className="ri-loader-4-line animate-spin mr-2"></i>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <i className="ri-download-2-line mr-2"></i>
+                    Export Excel
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
