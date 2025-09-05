@@ -71,7 +71,6 @@ const Leads = () => {
     const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
     const [sortKey, setSortKey] = useState<string>('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [allLeads, setAllLeads] = useState<RawLead[]>([]);
     const [leadStats, setLeadStats] = useState<LeadStats>({
         total: 0,
         new: 0,
@@ -182,6 +181,7 @@ const Leads = () => {
         checkUserAccess();
     }, []);
 
+    // Fetch data when user access is determined
     useEffect(() => {
         const fetchAllData = async () => {
             try {
@@ -203,23 +203,25 @@ const Leads = () => {
         };
 
         fetchAllData();
-    }, [currentPage, itemsPerPage, selectedStatus, selectedCategory, selectedAgent, hasAccess]);
+    }, [hasAccess, userRole, userProducts]);
+
+    // Refetch data when filters change
+    useEffect(() => {
+        if (hasAccess) {
+            fetchRawLeads();
+        }
+    }, [selectedStatus, selectedCategory, selectedAgent, selectedFilter, searchQuery]);
 
     // Separate useEffect for search with debouncing
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            if (searchQuery !== undefined) {
-                // Trigger re-filtering when search query changes
-                const filtered = getFilteredLeads();
-                setFilteredLeads(filtered);
-                setTotalResults(filtered.length);
-                setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-                setCurrentPage(1);
+            if (searchQuery !== undefined && hasAccess) {
+                fetchRawLeads();
             }
         }, 500); // 500ms debounce
 
         return () => clearTimeout(timeoutId);
-    }, [searchQuery]);
+    }, [searchQuery, hasAccess]);
 
     // Update formatted leads whenever raw leads change
     useEffect(() => {
@@ -227,6 +229,20 @@ const Leads = () => {
             formatLeadsData();
         }
     }, [rawLeads, userRole, userProducts]);
+
+    // Handle frontend pagination and filtering
+    useEffect(() => {
+        let filtered = getFilteredLeads();
+        
+        // Apply pagination
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedData = filtered.slice(startIndex, endIndex);
+        
+        setFilteredLeads(paginatedData);
+        setTotalResults(filtered.length);
+        setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    }, [leads, currentPage, itemsPerPage, selectedFilter, searchQuery]);
 
     // Filter leads based on selected filter and search query
     const getFilteredLeads = () => {
@@ -254,51 +270,14 @@ const Leads = () => {
         return filtered;
     };
 
-    // Update filtered leads when filter or search changes
+    // Calculate lead stats from the same filtered leads data
     useEffect(() => {
-        const filtered = getFilteredLeads();
-        setFilteredLeads(filtered);
-        setTotalResults(filtered.length);
-        setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-        setCurrentPage(1);
-    }, [selectedFilter, searchQuery, itemsPerPage]);
-
-    // Update filtered leads when leads data changes
-    useEffect(() => {
-        const filtered = getFilteredLeads();
-        setFilteredLeads(filtered);
-    }, [leads]);
-
-    // Fetch all leads via pagination for stats
-    const fetchAllLeadsForStats = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            let page = 1;
-            let allResults: RawLead[] = [];
-            let hasMore = true;
-            while (hasMore) {
-                // Build query parameters for stats (without filters to get all leads for accurate stats)
-                const queryParams = new URLSearchParams({
-                    limit: '100',
-                    page: page.toString()
-                });
-
-                const response = await axios.get(`${Base_url}leads?${queryParams.toString()}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const results = response.data.results || [];
-                allResults = [...allResults, ...results];
-                if (results.length < 100) {
-                    hasMore = false;
-                } else {
-                    page++;
-                }
-            }
-
-            // Filter leads based on user access for stats
-            let filteredResults = allResults;
+        if (rawLeads.length > 0) {
+            // Apply the same role-based filtering for stats
+            let leadsForStats = rawLeads;
+            
             if (userRole === 'admin' && userProducts.length > 0) {
-                filteredResults = allResults.filter((lead: any) => {
+                leadsForStats = rawLeads.filter((lead: any) => {
                     if (lead.products && lead.products.length > 0) {
                         return lead.products.some((leadProduct: any) => 
                             userProducts.includes(leadProduct.product?.id || leadProduct.id)
@@ -306,37 +285,23 @@ const Leads = () => {
                     }
                     return false;
                 });
-                console.log('Filtered stats leads for admin:', filteredResults.length, 'out of', allResults.length);
-            } else if (userRole === 'superAdmin') {
-                console.log('Super admin sees all leads for stats:', allResults.length);
-            } else {
-                filteredResults = [];
-                console.log('No access - showing empty stats');
+            } else if (userRole !== 'superAdmin') {
+                leadsForStats = [];
             }
 
-            setAllLeads(filteredResults);
-        } catch (error) {
-            console.error('Error fetching all leads for stats:', error);
+            const stats = {
+                total: leadsForStats.length,
+                new: leadsForStats.filter(lead => lead.status === 'new').length,
+                interested: leadsForStats.filter(lead => lead.status === 'interested').length,
+                contacted: leadsForStats.filter(lead => lead.status === 'contacted').length,
+                closed: leadsForStats.filter(lead => lead.status === 'closed').length
+            };
+            
+            console.log('Calculating stats from leads:', leadsForStats.length, 'Raw leads:', rawLeads.length);
+            console.log('Stats calculated:', stats);
+            setLeadStats(stats);
         }
-    };
-
-    useEffect(() => {
-        if (hasAccess) {
-            fetchAllLeadsForStats();
-        }
-    }, [hasAccess, userRole, userProducts]);
-
-    // Calculate lead stats from allLeads
-    useEffect(() => {
-        const stats = {
-            total: allLeads.length,
-            new: allLeads.filter(lead => lead.status === 'new').length,
-            interested: allLeads.filter(lead => lead.status === 'interested').length,
-            contacted: allLeads.filter(lead => lead.status === 'contacted').length,
-            closed: allLeads.filter(lead => lead.status === 'closed').length
-        };
-        setLeadStats(stats);
-    }, [allLeads]);
+    }, [rawLeads, userRole, userProducts]);
 
     const fetchUsers = async () => {
         try {
@@ -387,10 +352,10 @@ const Leads = () => {
         try {
             const token = localStorage.getItem('token');
             
-            // Build query parameters
+            // First, fetch ALL leads to get complete data for filtering and stats
             const queryParams = new URLSearchParams({
-                limit: itemsPerPage.toString(),
-                page: currentPage.toString()
+                limit: '100', // Fetch more records for frontend filtering
+                page: '1'
             });
 
             // Add filter parameters if they are selected
@@ -417,8 +382,7 @@ const Leads = () => {
             });
             console.log('Leads data:', response.data.results);
             setRawLeads(response.data.results);
-            setTotalPages(response.data.totalPages);
-            setTotalResults(response.data.totalResults);
+            // Pagination will be handled by useEffect
         } catch (err) {
             console.error('Error fetching leads:', err);
             throw err;

@@ -12,7 +12,8 @@ import { Base_url } from '@/app/api/config/BaseUrl';
 import axios from 'axios';
 
 interface AdminUser {
-  _id: string;
+  id: string;
+  _id?: string; // Optional for backward compatibility
   name: string;
   email: string;
   role: string;
@@ -96,35 +97,18 @@ const AdminUsers = () => {
         name: user.name || "--",
         email: user.email || "--",
         role: user.role || "--",
-        status: (
-          <span className={`badge ${user.status === 'active' ? '!bg-success/10 !text-success' : 
-            user.status === 'inactive' ? '!bg-danger/10 !text-danger' : 
-            '!bg-warning/10 !text-warning'}`}>
-            {user.status || '--'}
-          </span>
-        ),
-        emailVerified: user.isEmailVerified ? (
-          <span className="badge !bg-success/10 !text-success">Verified</span>
-        ) : (
-          <span className="badge !bg-warning/10 !text-warning">Not Verified</span>
-        ),
         products: user.products?.length > 0 ? user.products.map((p: any) => p.name).join(', ') : 'No Products',
         createdAt: user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '--',
         actions: [
           {
-            icon: "ri-eye-line",
-            className: "ti-btn-primary",
-            onClick: () => viewUser(user._id),
-          },
-          {
             icon: "ri-edit-line",
             className: "ti-btn-warning",
-            onClick: () => editUser(user._id),
+            onClick: () => editUser(user.id || user._id || ''),
           },
           {
             icon: "ri-delete-bin-line",
             className: "ti-btn-danger",
-            onClick: () => openDeleteModal(user._id),
+            onClick: () => openDeleteModal(user.id || user._id || ''),
           },
         ],
       }));
@@ -152,11 +136,12 @@ const AdminUsers = () => {
     setCurrentPage(1);
   };
 
-  const viewUser = (userId: string) => {
-    router.push(`/admin-users/view?id=${userId}`);
-  };
-
   const editUser = (userId: string) => {
+    console.log('Edit user clicked with ID:', userId);
+    if (!userId || userId === '') {
+      alert('Invalid user ID. Cannot edit this user.');
+      return;
+    }
     router.push(`/admin-users/edit?id=${userId}`);
   };
 
@@ -186,17 +171,21 @@ const AdminUsers = () => {
   };
 
   const openDeleteModal = (userId: string) => {
+    console.log('Delete user clicked with ID:', userId);
+    if (!userId || userId === '') {
+      alert('Invalid user ID. Cannot delete this user.');
+      return;
+    }
     setUserToDelete(userId);
     setShowDeleteModal(true);
   };
 
   const handleExport = () => {
+    // Get the raw data from the API response for export
     const exportData = adminUsers.map(user => ({
       'Name': user.name,
       'Email': user.email,
       'Role': user.role,
-      'Status': user.status.props.children,
-      'Email Verified': user.emailVerified.props.children,
       'Products': user.products,
       'Created At': user.createdAt
     }));
@@ -212,8 +201,6 @@ const AdminUsers = () => {
     { key: "name", label: "Name", sortable: true },
     { key: "email", label: "Email", sortable: true },
     { key: "role", label: "Role", sortable: true },
-    { key: "status", label: "Status", sortable: true },
-    { key: "emailVerified", label: "Email Verified", sortable: false },
     { key: "products", label: "Products", sortable: false },
     { key: "createdAt", label: "Created At", sortable: true },
     { key: "actions", label: "Actions", sortable: false },
