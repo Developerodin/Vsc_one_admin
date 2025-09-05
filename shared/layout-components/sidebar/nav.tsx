@@ -48,6 +48,8 @@ const ShieldIcon = <i className="bx bx-shield side-menu__icon"></i>;
 
 const CommissionIcon = <i className="bx bx-money-withdraw side-menu__icon"></i>;
 
+const AdminUserIcon = <i className="bx bx-user-check side-menu__icon"></i>;
+
 const badge = (
   <span className="badge !bg-warning/10 !text-warning !py-[0.25rem] !px-[0.45rem] !text-[0.75em] ms-1">
     12
@@ -115,6 +117,16 @@ export const MenuItems: any = [
     title: "Roles",
     type: "link",
     path: "/roles/roles",
+    active: false,
+    selected: false,
+    dirchange: false
+  },
+
+  {
+    icon: AdminUserIcon,
+    title: "Admin Users",
+    type: "link",
+    path: "/admin-users/admin-users",
     active: false,
     selected: false,
     dirchange: false

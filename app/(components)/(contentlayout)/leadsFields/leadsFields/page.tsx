@@ -42,61 +42,143 @@ const LeadsFields = () => {
     const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
     const [sortKey, setSortKey] = useState<string>('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [userRole, setUserRole] = useState<string>('');
+    const [userProducts, setUserProducts] = useState<string[]>([]);
+    const [hasAccess, setHasAccess] = useState<boolean>(true);
+
+    // Function to check user access based on role and products
+    const checkUserAccess = () => {
+        try {
+            const userDataString = localStorage.getItem('user');
+            if (!userDataString) {
+                console.error('No user data found in localStorage');
+                setHasAccess(false);
+                return;
+            }
+
+            const userData = JSON.parse(userDataString);
+            console.log('User data from localStorage:', userData);
+
+            const role = userData.role || '';
+            const products = userData.products || [];
+
+            setUserRole(role);
+            setUserProducts(products);
+
+            // Check if user has access
+            if (role === 'superAdmin') {
+                // Super admin has access to all lead fields
+                setHasAccess(true);
+                console.log('Super admin access granted - all lead fields');
+            } else if (role === 'admin') {
+                // Admin has access only to lead fields with assigned products
+                if (products && products.length > 0) {
+                    setHasAccess(true);
+                    console.log('Admin access granted for products:', products);
+                } else {
+                    setHasAccess(false);
+                    console.log('Admin has no products assigned');
+                }
+            } else {
+                // Other roles have no access
+                setHasAccess(false);
+                console.log('No access for role:', role);
+            }
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+            setHasAccess(false);
+        }
+    };
 
     useEffect(() => {
-        fetchProducts();
+        checkUserAccess();
+    }, []);
+
+    // Fetch data when user access is determined
+    useEffect(() => {
+        if (hasAccess && userRole && (userRole === 'superAdmin' || (userRole === 'admin' && userProducts.length > 0))) {
+            fetchProducts();
+        }
+    }, [hasAccess, userRole, userProducts]);
+
+    // Handle pagination changes
+    useEffect(() => {
+        if (hasAccess && userRole && (userRole === 'superAdmin' || (userRole === 'admin' && userProducts.length > 0))) {
+            // For pagination, we'll handle it in the frontend since we're fetching all data
+            // This effect is mainly for when itemsPerPage changes
+        }
     }, [currentPage, itemsPerPage]);
 
-    // Add search effect
+    // Handle search and pagination
     useEffect(() => {
-        if (searchQuery.trim() === '') {
-            setFilteredProducts(products);
-            setTotalResults(products.length);
-            setTotalPages(Math.ceil(products.length / itemsPerPage));
-        } else {
-            const filtered = products.filter(product => {
+        let filtered = products;
+        
+        // Apply search filter
+        if (searchQuery.trim() !== '') {
+            filtered = products.filter(product => {
                 const productName = product.name.toLowerCase();
                 const searchLower = searchQuery.toLowerCase();
                 return productName.includes(searchLower);
             });
-            setFilteredProducts(filtered);
-            setTotalResults(filtered.length);
-            setTotalPages(Math.ceil(filtered.length / itemsPerPage));
         }
-        setCurrentPage(1);
-    }, [searchQuery, itemsPerPage]);
-
-    // Add search effect
-    useEffect(() => {
-        if (searchQuery.trim() === '') {
-            setFilteredProducts(products);
-        } else {
-            const filtered = products.filter(product => {
-                const productName = product.name.toLowerCase();
-                const searchLower = searchQuery.toLowerCase();
-                return productName.includes(searchLower);
-            });
-            setFilteredProducts(filtered);
-            setTotalResults(filtered.length);
-            setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-        }
-    }, [products]);
+        
+        // Apply pagination
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedData = filtered.slice(startIndex, endIndex);
+        
+        setFilteredProducts(paginatedData);
+        setTotalResults(filtered.length);
+        setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    }, [products, searchQuery, currentPage, itemsPerPage]);
 
     const fetchProducts = async () => {
         try {
             const token = localStorage.getItem('token');
             
-            // Fetch leads fields data from the new endpoint
-            const response = await axios.get(`${Base_url}leadsfields?limit=${itemsPerPage}&page=${currentPage}`, {
+            // First, fetch ALL leads fields to get complete data for filtering
+            const response = await axios.get(`${Base_url}leadsfields?limit=1000&page=1`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
 
+            console.log('All leads fields from API:', response.data.results);
+            console.log('User products:', userProducts);
+            console.log('User role:', userRole);
+
+            // Filter leads fields based on user access
+            let leadsFieldsToProcess = response.data.results || [];
+
+            if (userRole === 'admin' && userProducts.length > 0) {
+                // Filter lead fields to only show those with assigned products
+                leadsFieldsToProcess = response.data.results.filter((leadField: any) => {
+                    console.log('Checking lead field:', leadField);
+                    console.log('Lead field product ID:', leadField.product?.id);
+                    console.log('Lead field product:', leadField.product);
+                    
+                    if (leadField.product && leadField.product.id) {
+                        const hasAccess = userProducts.includes(leadField.product.id);
+                        console.log('Has access to this lead field:', hasAccess);
+                        return hasAccess;
+                    }
+                    console.log('No product ID found for this lead field');
+                    return false;
+                });
+                console.log('Filtered lead fields for admin:', leadsFieldsToProcess.length, 'out of', response.data.results.length);
+            } else if (userRole === 'superAdmin') {
+                // Super admin sees all lead fields
+                console.log('Super admin sees all lead fields:', response.data.results.length);
+            } else {
+                // No access - show empty results
+                leadsFieldsToProcess = [];
+                console.log('No access - showing empty lead fields results');
+            }
+
             // Format the data according to table headers
             const formattedData: ProductData[] = [];
             
-            response.data.results.forEach((leadField: any, index: number) => {
+            leadsFieldsToProcess.forEach((leadField: any, index: number) => {
                 formattedData.push({
                     id: leadField.id,
                     srNo: index + 1,
@@ -118,9 +200,10 @@ const LeadsFields = () => {
                 });
             });
 
+            console.log('Formatted data for display:', formattedData);
+
             setProducts(formattedData);
-            setTotalPages(response.data.totalPages);
-            setTotalResults(response.data.totalResults);
+            // Pagination will be handled by the useEffect
         } catch (error) {
             console.error('Error fetching leads fields:', error);
         }
@@ -254,7 +337,7 @@ const LeadsFields = () => {
                         <div className="box-header">
                             <h5 className="box-title">Leads Fields List</h5>
                             <div className="flex space-x-2">
-                                {!(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
+                                {hasAccess && !(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
                                     type="button" 
                                     className="ti-btn ti-btn-danger "
                                     onClick={handleDeleteSelected}
@@ -263,48 +346,68 @@ const LeadsFields = () => {
                                     <i className="ri-delete-bin-line me-2"></i>{" "}
                                     {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
                                 </button> : null}
-                                <button 
-                                    type="button" 
-                                    className="ti-btn ti-btn-primary"
-                                    onClick={handleExport}
-                                    disabled={selectedIds.length === 0}
-                                >
-                                    <i className="ri-download-2-line me-2"></i> Export
-                                </button>
-                                <button 
-                                    type="button" 
-                                    className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
-                                    onClick={() => router.push('/leadsFields/create')}
-                                >
-                                    <i className="ri-add-line font-semibold align-middle"></i> Add Field
-                                </button>
+                                {hasAccess && (
+                                    <button 
+                                        type="button" 
+                                        className="ti-btn ti-btn-primary"
+                                        onClick={handleExport}
+                                        disabled={selectedIds.length === 0}
+                                    >
+                                        <i className="ri-download-2-line me-2"></i> Export
+                                    </button>
+                                )}
+                                {hasAccess && (
+                                    <button 
+                                        type="button" 
+                                        className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
+                                        onClick={() => router.push('/leadsFields/create')}
+                                    >
+                                        <i className="ri-add-line font-semibold align-middle"></i> Add Field
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div className="box-body">
-                            <DataTable 
-                                headers={headers} 
-                                data={filteredProducts}
-                                currentPage={currentPage}
-                                totalPages={totalPages}
-                                onPageChange={(page) => {
-                                    setCurrentPage(page);
-                                }}
-                                totalItems={totalResults}
-                                itemsPerPage={itemsPerPage}
-                                onItemsPerPageChange={(size) => {
-                                    setItemsPerPage(size);
-                                    setCurrentPage(1);
-                                }}
-                                onSearch={handleSearch}
-                                searchQuery={searchQuery}
-                                showCheckbox={true}
-                                selectedIds={selectedIds}
-                                onSelectionChange={setSelectedIds}
-                                idField="id"
-                                onSort={handleSort}
-                                sortKey={sortKey}
-                                sortDirection={sortDirection}
-                            />
+                            {!hasAccess ? (
+                                <div className="text-center py-8">
+                                    <div className="mb-4">
+                                        <i className="ri-shield-cross-line text-6xl text-danger"></i>
+                                    </div>
+                                    <h4 className="text-lg font-semibold text-gray-800 mb-2">Access Denied</h4>
+                                    <p className="text-gray-600 mb-4">
+                                        You don't have permission to view lead fields. Please contact your administrator.
+                                    </p>
+                                    <div className="text-sm text-gray-500">
+                                        <p><strong>Your Role:</strong> {userRole || 'Unknown'}</p>
+                                        <p><strong>Assigned Products:</strong> {userProducts.length > 0 ? userProducts.join(', ') : 'None'}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <DataTable 
+                                    headers={headers} 
+                                    data={filteredProducts}
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={(page) => {
+                                        setCurrentPage(page);
+                                    }}
+                                    totalItems={totalResults}
+                                    itemsPerPage={itemsPerPage}
+                                    onItemsPerPageChange={(size) => {
+                                        setItemsPerPage(size);
+                                        setCurrentPage(1);
+                                    }}
+                                    onSearch={handleSearch}
+                                    searchQuery={searchQuery}
+                                    showCheckbox={true}
+                                    selectedIds={selectedIds}
+                                    onSelectionChange={setSelectedIds}
+                                    idField="id"
+                                    onSort={handleSort}
+                                    sortKey={sortKey}
+                                    sortDirection={sortDirection}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
