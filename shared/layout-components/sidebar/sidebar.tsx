@@ -10,8 +10,59 @@ import Menuloop from "./menuloop";
 import { usePathname, useRouter } from "next/navigation";
 import { MenuItems } from "./nav";
 
+// Role-based menu filtering utility
+const filterMenuItemsByRole = (menuItems: any[], userRole: string, allowedSidebarItems: string[] = []): any[] => {
+  if (userRole === 'superAdmin') {
+    return menuItems; // Super admin has access to all menu items
+  }
+
+  return menuItems.filter((item: any) => {
+    // Always show menu titles (section headers)
+    if (item.menutitle) {
+      return true;
+    }
+
+    // For regular menu items, check if they're in the allowed sidebar items
+    if (item.type === 'link' && item.path) {
+      // Extract the path segment after the first slash (e.g., '/dashboards/analytics' -> 'dashboards')
+      const pathSegments = item.path.split('/').filter(Boolean);
+      const mainPath = pathSegments[0];
+      
+      console.log(`Checking menu item: ${item.title}, path: ${item.path}, mainPath: ${mainPath}, allowedItems:`, allowedSidebarItems);
+      
+      // Handle special case for dashboard (dashboards vs dashboard)
+      if (mainPath === 'dashboards' && allowedSidebarItems.includes('dashboard')) {
+        console.log(`✅ Dashboard access granted for ${item.title}`);
+        return true;
+      }
+      
+      const hasAccess = allowedSidebarItems.includes(mainPath);
+      console.log(`${hasAccess ? '✅' : '❌'} Access ${hasAccess ? 'granted' : 'denied'} for ${item.title} (${mainPath})`);
+      return hasAccess;
+    }
+
+    // For submenu items, recursively filter
+    if (item.children && item.children.length > 0) {
+      const filteredChildren: any[] = filterMenuItemsByRole(item.children, userRole, allowedSidebarItems);
+      return filteredChildren.length > 0;
+    }
+
+    return false;
+  }).map((item: any) => {
+    // Recursively filter children if they exist
+    if (item.children && item.children.length > 0) {
+      return {
+        ...item,
+        children: filterMenuItemsByRole(item.children, userRole, allowedSidebarItems)
+      };
+    }
+    return item;
+  });
+};
+
 const Sidebar = ({ local_varaiable, ThemeChanger }: any) => {
 	const [menuitems, setMenuitems] = useState(MenuItems);
+	const [filteredMenuItems, setFilteredMenuItems] = useState(MenuItems);
 
 	const path = usePathname()	
 
@@ -25,6 +76,41 @@ const Sidebar = ({ local_varaiable, ThemeChanger }: any) => {
 		closeMenudata(MenuItems);
 		setMenuitems((arr: any) => [...arr]);
 	}
+
+	// Filter menu items based on user role and navigation permissions
+	useEffect(() => {
+		const getUserData = () => {
+			try {
+				const userData = localStorage.getItem('user');
+				if (userData) {
+					const parsedUser = JSON.parse(userData);
+					console.log('User data from localStorage:', parsedUser);
+					
+					const userRole = parsedUser.role;
+					const allowedSidebarItems = parsedUser.navigation?.sidebar || [];
+					
+					console.log('User role:', userRole);
+					console.log('Allowed sidebar items:', allowedSidebarItems);
+					
+					const filtered = filterMenuItemsByRole(MenuItems, userRole, allowedSidebarItems);
+					console.log('Filtered menu items:', filtered);
+					
+					setFilteredMenuItems(filtered);
+					setMenuitems(filtered);
+				} else {
+					console.log('No user data found in localStorage, showing all menu items');
+					setFilteredMenuItems(MenuItems);
+					setMenuitems(MenuItems);
+				}
+			} catch (error) {
+				console.error('Error parsing user data from localStorage:', error);
+				setFilteredMenuItems(MenuItems);
+				setMenuitems(MenuItems);
+			}
+		};
+
+		getUserData();
+	}, []);
 
 	useEffect(() => {
 
@@ -332,7 +418,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }: any) => {
 	let hasParent = false;
 	let hasParentLevel = 0;
 
-	function setSubmenu(event: any, targetObject: any, MenuItems = menuitems) {
+	function setSubmenu(event: any, targetObject: any, MenuItems = filteredMenuItems) {
 		const theme = store.getState();
 		if ((window.screen.availWidth <= 992 || theme.dataNavStyle != "icon-hover") && (window.screen.availWidth <= 992 || theme.dataNavStyle != "menu-hover")) {
 		if (!event?.ctrlKey) {
@@ -426,7 +512,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }: any) => {
 				setSubmenuRecursively(item.children);
 			});
 		};
-		setSubmenuRecursively(MenuItems);
+		setSubmenuRecursively(filteredMenuItems);
 	}
 	const [previousUrl, setPreviousUrl] = useState("/");
 
@@ -450,7 +536,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }: any) => {
 		}
 	}, [pathname]);
 
-	function toggleSidemenu(event: any, targetObject: any, MenuItems = menuitems) {
+	function toggleSidemenu(event: any, targetObject: any, MenuItems = filteredMenuItems) {
 		const theme = store.getState();
 		let element = event.target;
 		if ((theme.dataNavStyle != "icon-hover" && theme.dataNavStyle != "menu-hover") || (window.innerWidth < 992) || (theme.dataNavLayout != "horizontal") && (theme.dataToggled != "icon-hover-closed" && theme.dataToggled != "menu-hover-closed")) {
@@ -654,7 +740,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }: any) => {
 							</svg></div>
 
 							<ul className="main-menu" onClick={() => Sideclick()}>
-								{MenuItems.map((levelone: any, index:any) => (
+								{filteredMenuItems.map((levelone: any, index:any) => (
 									<Fragment key={index}>
 										<li className={`${levelone.menutitle ? 'slide__category' : ''} ${levelone.type === 'link' ? 'slide' : ''}
                                                ${levelone.type === 'sub' ? 'slide has-sub' : ''} ${levelone?.active ? 'open' : ''} ${levelone?.selected ? 'active' : ''}`}>
