@@ -18,6 +18,14 @@ interface Permission {
   isActive: boolean;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  categories: string[];
+}
+
 const Roles = () => {
   const router = useRouter();
   const [roles, setRoles] = useState<any[]>([]);
@@ -32,6 +40,9 @@ const Roles = () => {
   const [loadingPermissions, setLoadingPermissions] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [updatingPermissions, setUpdatingPermissions] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
@@ -54,6 +65,32 @@ const Roles = () => {
       console.error('Error fetching permissions:', error);
     } finally {
       setLoadingPermissions(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${Base_url}products?limit=100&status=active`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      const productsData = response.data.results.map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        type: product.type,
+        status: product.status,
+        categories: product.categories || []
+      }));
+      
+      setProducts(productsData);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -121,26 +158,48 @@ const Roles = () => {
   const openPermissionModal = async (role: any) => {
     setSelectedRole(role);
     setShowPermissionModal(true);
+    
+    // Clear any existing null values from state
+    setSelectedPermissions(prev => prev.filter(id => id !== null && id !== undefined && id !== ''));
+    setSelectedProducts(prev => prev.filter(id => id !== null && id !== undefined && id !== ''));
+    
     try {
-      // First fetch the role's current permissions
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${Base_url}role-permissions/roles/${role.id}/permissions`, {
+      
+      // Fetch the role's current permissions
+      const permissionsResponse = await axios.get(`${Base_url}role-permissions/roles/${role.id}/permissions`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       
-      // Extract just the IDs from the permission objects
-      const currentPermissions = response?.data?.map((permission: any) => permission.id) || [];
-      console.log('Current permission IDs:', currentPermissions); // For debugging
+      // Extract just the IDs from the permission objects and filter out null/undefined values
+      const currentPermissions = permissionsResponse?.data?.map((permission: any) => permission.id).filter((id: any) => id !== null && id !== undefined && id !== '') || [];
+      console.log('Current permission IDs:', currentPermissions);
       setSelectedPermissions(currentPermissions);
       
-      // Then fetch all available permissions
-      await fetchPermissions();
+      // Fetch the role's current products
+      try {
+        const productsResponse = await axios.get(`${Base_url}role-permissions/roles/${role.id}/products`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        const currentProducts = productsResponse?.data?.map((product: any) => product.id).filter((id: any) => id !== null && id !== undefined && id !== '') || [];
+        console.log('Current product IDs:', currentProducts);
+        setSelectedProducts(currentProducts);
+      } catch (productError) {
+        console.error('Error fetching role products:', productError);
+        setSelectedProducts([]);
+      }
+      
+      // Fetch all available permissions and products
+      await Promise.all([fetchPermissions(), fetchProducts()]);
     } catch (error) {
       console.error('Error fetching role permissions:', error);
-      // If there's an error, still fetch available permissions
-      await fetchPermissions();
+      // If there's an error, still fetch available permissions and products
+      await Promise.all([fetchPermissions(), fetchProducts()]);
     }
   };
 
@@ -150,8 +209,21 @@ const Roles = () => {
     setUpdatingPermissions(true);
     try {
       const token = localStorage.getItem("token");
+      
+      // Filter out null values from both arrays
+      const validPermissionIds = selectedPermissions.filter(id => id !== null && id !== undefined && id !== '');
+      const validProductIds = selectedProducts.filter(id => id !== null && id !== undefined && id !== '');
+      
+      console.log('Sending permission update:', {
+        permissionIds: validPermissionIds,
+        productIds: validProductIds,
+        originalSelectedPermissions: selectedPermissions,
+        originalSelectedProducts: selectedProducts
+      });
+      
       const response = await axios.post(`${Base_url}role-permissions/roles/${selectedRole.id}/permissions`, {
-        permissionIds: selectedPermissions
+        permissionIds: validPermissionIds,
+        productIds: validProductIds
       }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -295,10 +367,10 @@ const Roles = () => {
 
       {/* Permission Management Modal */}
       <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center ${showPermissionModal ? '' : 'hidden'}`}>
-        <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+        <div className="bg-white rounded-lg p-6 w-full max-w-4xl">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
-              Manage Permissions - {selectedRole?.name}
+              Manage Permissions & Products - {selectedRole?.name}
             </h3>
             <button
               onClick={() => setShowPermissionModal(false)}
@@ -308,32 +380,79 @@ const Roles = () => {
             </button>
           </div>
           
-          <div className="max-h-[60vh] overflow-y-auto">
-            {loadingPermissions ? (
-              <div className="text-center py-4">Loading permissions...</div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {permissions.map((permission) => (
-                  <div key={permission.id} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={`perm-${permission.id}`}
-                      checked={selectedPermissions.includes(permission.id)}
-                      onChange={(e) => {
-                        const newPermissions = e.target.checked
-                          ? [...selectedPermissions, permission.id]
-                          : selectedPermissions.filter(v => v !== permission.id);
-                        setSelectedPermissions(newPermissions);
-                      }}
-                      className="form-checkbox"
-                    />
-                    <label htmlFor={`perm-${permission.id}`} className="ml-2">
-                      {permission.name}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="max-h-[70vh] overflow-y-auto">
+            {/* Permissions Section */}
+            <div className="mb-6">
+              <h4 className="text-md font-semibold mb-3 text-gray-700">Permissions</h4>
+              {loadingPermissions ? (
+                <div className="text-center py-4">Loading permissions...</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {permissions.map((permission) => (
+                    <div key={permission.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`perm-${permission.id}`}
+                        checked={selectedPermissions.includes(permission.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Only add if permission.id is valid
+                            if (permission.id && permission.id !== null && permission.id !== undefined) {
+                              const newPermissions = [...selectedPermissions, permission.id];
+                              setSelectedPermissions(newPermissions);
+                            }
+                          } else {
+                            const newPermissions = selectedPermissions.filter(v => v !== permission.id);
+                            setSelectedPermissions(newPermissions);
+                          }
+                        }}
+                        className="form-checkbox"
+                      />
+                      <label htmlFor={`perm-${permission.id}`} className="ml-2 text-sm">
+                        {permission.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Products Section */}
+            <div className="mb-6">
+              <h4 className="text-md font-semibold mb-3 text-gray-700">Products</h4>
+              {loadingProducts ? (
+                <div className="text-center py-4">Loading products...</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {products.map((product) => (
+                    <div key={product.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`prod-${product.id}`}
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Only add if product.id is valid
+                            if (product.id && product.id !== null && product.id !== undefined) {
+                              const newProducts = [...selectedProducts, product.id];
+                              setSelectedProducts(newProducts);
+                            }
+                          } else {
+                            const newProducts = selectedProducts.filter(v => v !== product.id);
+                            setSelectedProducts(newProducts);
+                          }
+                        }}
+                        className="form-checkbox"
+                      />
+                      <label htmlFor={`prod-${product.id}`} className="ml-2 text-sm">
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-xs text-gray-500">{product.type}</div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2 mt-6">
@@ -350,7 +469,7 @@ const Roles = () => {
               onClick={handlePermissionUpdate}
               disabled={updatingPermissions}
             >
-              {updatingPermissions ? 'Updating...' : 'Update Permissions'}
+              {updatingPermissions ? 'Updating...' : 'Update Permissions & Products'}
             </button>
           </div>
         </div>

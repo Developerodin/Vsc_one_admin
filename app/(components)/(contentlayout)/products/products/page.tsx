@@ -76,10 +76,63 @@ const Products = () => {
     const [selectedStatus, setSelectedStatus] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [showFilters, setShowFilters] = useState(false);
+    const [userRole, setUserRole] = useState<string>('');
+    const [userProducts, setUserProducts] = useState<string[]>([]);
+    const [hasAccess, setHasAccess] = useState<boolean>(true);
+
+    // Function to check user access based on role and products
+    const checkUserAccess = () => {
+        try {
+            const userDataString = localStorage.getItem('user');
+            if (!userDataString) {
+                console.error('No user data found in localStorage');
+                setHasAccess(false);
+                return;
+            }
+
+            const userData = JSON.parse(userDataString);
+            console.log('User data from localStorage:', userData);
+
+            const role = userData.role || '';
+            const products = userData.products || [];
+
+            setUserRole(role);
+            setUserProducts(products);
+
+            // Check if user has access
+            if (role === 'superAdmin') {
+                // Super admin has access to all products
+                setHasAccess(true);
+                console.log('Super admin access granted - all products');
+            } else if (role === 'admin') {
+                // Admin has access only to assigned products
+                if (products && products.length > 0) {
+                    setHasAccess(true);
+                    console.log('Admin access granted for products:', products);
+                } else {
+                    setHasAccess(false);
+                    console.log('Admin has no products assigned');
+                }
+            } else {
+                // Other roles have no access
+                setHasAccess(false);
+                console.log('No access for role:', role);
+            }
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+            setHasAccess(false);
+        }
+    };
 
     useEffect(() => {
-        fetchProducts();
-    }, [currentPage, itemsPerPage, selectedStatus, selectedCategory]);
+        checkUserAccess();
+    }, []);
+
+    useEffect(() => {
+        if (hasAccess) {
+            fetchProducts();
+        }
+    }, [currentPage, itemsPerPage, selectedStatus, selectedCategory, userRole, userProducts, hasAccess]);
 
     useEffect(() => {
         if (searchQuery.trim() === '') {
@@ -161,8 +214,26 @@ const Products = () => {
                 }
             });
 
+            // Filter products based on user access
+            let filteredResults = response.data.results;
+            
+            if (userRole === 'admin' && userProducts.length > 0) {
+                // Filter products to only show those assigned to the admin
+                filteredResults = response.data.results.filter((product: any) => 
+                    userProducts.includes(product.id)
+                );
+                console.log('Filtered products for admin:', filteredResults.length, 'out of', response.data.results.length);
+            } else if (userRole === 'superAdmin') {
+                // Super admin sees all products
+                console.log('Super admin sees all products:', response.data.results.length);
+            } else {
+                // No access - show empty results
+                filteredResults = [];
+                console.log('No access - showing empty results');
+            }
+
             // Format the data according to table headers
-            const formattedData = response.data.results.map((product: any, index: number) => {
+            const formattedData = filteredResults.map((product: any, index: number) => {
                 // Get category names for all category IDs
                 const categoryNames = product.categories?.map((catId: string) => {
                     const category = categoryOptions.find((cat: any) => cat.value === catId);
@@ -193,8 +264,8 @@ const Products = () => {
 
             setProducts(formattedData);
             setFilteredProducts(formattedData);
-            setTotalPages(response.data.totalPages);
-            setTotalResults(response.data.totalResults);
+            setTotalPages(Math.ceil(filteredResults.length / itemsPerPage));
+            setTotalResults(filteredResults.length);
         } catch (error) {
             console.error('Error fetching products:', error);
         }
@@ -479,7 +550,7 @@ const Products = () => {
                         <div className="box-header">
                             <h5 className="box-title">Products List</h5>
                             <div className="flex space-x-2">
-                                {!(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
+                                {hasAccess && !(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
                                     type="button" 
                                     className="ti-btn ti-btn-danger"
                                     onClick={handleDeleteSelected}
@@ -488,28 +559,34 @@ const Products = () => {
                                     <i className="ri-delete-bin-line me-2"></i>{" "}
                                     {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
                                 </button> : null}
-                                <button
-                                    type="button"
-                                    className="ti-btn ti-btn-secondary"
-                                    onClick={() => setShowFilters(!showFilters)}
-                                >
-                                    <i className="ri-filter-line me-2"></i> Filters
-                                </button>
-                                <button
-                  type="button"
-                  className="ti-btn ti-btn-primary"
-                  onClick={handleExport}
-                  disabled={selectedIds.length === 0}
-                >
-                  <i className="ri-download-2-line me-2"></i> Export
-                </button>
-                                <button 
-                                    type="button" 
-                                    className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
-                                    onClick={() => router.push('/products/create')}
-                                >
-                                    <i className="ri-add-line font-semibold align-middle"></i> Create Product
-                                </button>
+                                {hasAccess && (
+                                    <button
+                                        type="button"
+                                        className="ti-btn ti-btn-secondary"
+                                        onClick={() => setShowFilters(!showFilters)}
+                                    >
+                                        <i className="ri-filter-line me-2"></i> Filters
+                                    </button>
+                                )}
+                                {hasAccess && (
+                                    <button
+                                        type="button"
+                                        className="ti-btn ti-btn-primary"
+                                        onClick={handleExport}
+                                        disabled={selectedIds.length === 0}
+                                    >
+                                        <i className="ri-download-2-line me-2"></i> Export
+                                    </button>
+                                )}
+                                {hasAccess && (
+                                    <button 
+                                        type="button" 
+                                        className="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]"
+                                        onClick={() => router.push('/products/create')}
+                                    >
+                                        <i className="ri-add-line font-semibold align-middle"></i> Create Product
+                                    </button>
+                                )}
                                 <div id="create-product" className="hs-overlay hidden ti-modal">
                                     <div className="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out min-h-[calc(100%-3.5rem)] flex items-center">
                                         <div className="ti-modal-content">
@@ -785,7 +862,7 @@ const Products = () => {
                         </div>
                         
                         {/* Filter Section */}
-                        {showFilters && (
+                        {hasAccess && showFilters && (
                             <div className="box-body border-b">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -825,30 +902,46 @@ const Products = () => {
                         )}
                         
                         <div className="box-body">
-                            <DataTable 
-                                headers={headers} 
-                                data={filteredProducts}
-                                currentPage={currentPage}
-                                totalPages={totalPages}
-                                onPageChange={(page) => {
-                                    setCurrentPage(page);
-                                }}
-                                totalItems={totalResults}
-                                itemsPerPage={itemsPerPage}
-                                onItemsPerPageChange={(size) => {
-                                    setItemsPerPage(size);
-                                    setCurrentPage(1);
-                                }}
-                                onSearch={handleSearch}
-                                searchQuery={searchQuery}
-                                showCheckbox={true}
-                                selectedIds={selectedIds}
-                                onSelectionChange={setSelectedIds}
-                                idField="id"
-                                onSort={handleSort}
-                                sortKey={sortKey}
-                                sortDirection={sortDirection}
-                            />
+                            {!hasAccess ? (
+                                <div className="text-center py-8">
+                                    <div className="mb-4">
+                                        <i className="ri-shield-cross-line text-6xl text-danger"></i>
+                                    </div>
+                                    <h4 className="text-lg font-semibold text-gray-800 mb-2">Access Denied</h4>
+                                    <p className="text-gray-600 mb-4">
+                                        You don't have permission to view products. Please contact your administrator.
+                                    </p>
+                                    <div className="text-sm text-gray-500">
+                                        <p><strong>Your Role:</strong> {userRole || 'Unknown'}</p>
+                                        <p><strong>Assigned Products:</strong> {userProducts.length > 0 ? userProducts.join(', ') : 'None'}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <DataTable 
+                                    headers={headers} 
+                                    data={filteredProducts}
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={(page) => {
+                                        setCurrentPage(page);
+                                    }}
+                                    totalItems={totalResults}
+                                    itemsPerPage={itemsPerPage}
+                                    onItemsPerPageChange={(size) => {
+                                        setItemsPerPage(size);
+                                        setCurrentPage(1);
+                                    }}
+                                    onSearch={handleSearch}
+                                    searchQuery={searchQuery}
+                                    showCheckbox={true}
+                                    selectedIds={selectedIds}
+                                    onSelectionChange={setSelectedIds}
+                                    idField="id"
+                                    onSort={handleSort}
+                                    sortKey={sortKey}
+                                    sortDirection={sortDirection}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
