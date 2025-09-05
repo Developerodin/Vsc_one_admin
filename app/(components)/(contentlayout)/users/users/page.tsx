@@ -28,10 +28,18 @@ const Users = () => {
   const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
   const [sortKey, setSortKey] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedRole, setSelectedRole] = useState('user');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const roleFilterOptions = [
+    { value: 'user', label: 'User' },
+    { value: 'admin', label: 'Admin' },
+    { value: 'superAdmin', label: 'Super Admin' }
+  ];
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, selectedRole]);
 
   // Reset to first page when search query changes
   useEffect(() => {
@@ -54,6 +62,11 @@ const Users = () => {
       // Add search parameter if search query exists
       if (searchQuery.trim()) {
         queryParams.append('search', searchQuery.trim());
+      }
+
+      // Add role filter
+      if (selectedRole) {
+        queryParams.append('role', selectedRole);
       }
 
       const response = await axios.get(`${Base_url}users?${queryParams.toString()}`, {
@@ -269,6 +282,12 @@ const Users = () => {
     setSearchQuery(value);
   };
 
+  const clearFilters = () => {
+    setSelectedRole('user');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
   // Debounced search effect
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -299,6 +318,13 @@ const Users = () => {
             <div className="box-header">
               <h5 className="box-title">Users List</h5>
               <div className="flex space-x-2">
+                {/* <button 
+                  type="button" 
+                  className="ti-btn ti-btn-secondary !py-1 !px-2 !text-[0.75rem]"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <i className="ri-filter-line font-semibold align-middle"></i> Filters
+                </button> */}
                 {!(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
                   type="button" 
                   className="ti-btn ti-btn-danger "
@@ -325,6 +351,43 @@ const Users = () => {
                 </button>
               </div>
             </div>
+            
+            {/* Filters Section */}
+            {showFilters && (
+              <div className="box-body border-b border-gray-200 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Role
+                    </label>
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => {
+                        setSelectedRole(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="form-control"
+                    >
+                      {roleFilterOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <button
+                      onClick={clearFilters}
+                      className="ti-btn ti-btn-light !py-1 !px-2 !text-[0.75rem]"
+                    >
+                      <i className="ri-refresh-line font-semibold align-middle mr-1"></i> Clear Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="box-body">
               {loading ? (
                 <div className="text-center">Loading...</div>

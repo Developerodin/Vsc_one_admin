@@ -32,6 +32,8 @@ const EditAdminUser = () => {
   const searchParams = useSearchParams();
   const userId = searchParams.get('id');
   
+  console.log('Edit page - userId from URL:', userId);
+  
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -73,18 +75,31 @@ const EditAdminUser = () => {
   ];
 
   useEffect(() => {
-    if (userId) {
+    if (userId && userId !== 'undefined' && userId !== 'null') {
       fetchAdminUserData();
       fetchProducts();
+    } else {
+      console.error('Invalid userId:', userId);
+      alert('Invalid user ID. Please check the URL.');
+      router.push('/admin-users/admin-users');
     }
-  }, [userId]);
+  }, [userId, router]);
+
+  // Debug formData changes
+  useEffect(() => {
+    console.log('Form data updated:', formData);
+  }, [formData]);
 
   const fetchAdminUserData = async () => {
-    if (!userId) return;
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      console.error('Invalid userId for fetchAdminUserData:', userId);
+      return;
+    }
     
     try {
       setLoadingData(true);
       const token = localStorage.getItem("token");
+      console.log('Fetching admin user data for userId:', userId);
       const response = await axios.get(`${Base_url}admin-users/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -92,12 +107,15 @@ const EditAdminUser = () => {
       });
 
       const userData = response.data;
+      console.log('User data received:', userData);
+      console.log('Products data:', userData.products);
+      
       setFormData({
         name: userData.name || '',
         email: userData.email || '',
         password: '', // Don't pre-fill password
         role: userData.role || 'admin',
-        products: userData.products?.map((p: any) => p._id) || [],
+        products: userData.products?.map((p: any) => p.id || p._id) || [],
         navigation: userData.navigation || {
           sidebar: ['dashboard'],
           theme: 'light'
@@ -172,6 +190,11 @@ const EditAdminUser = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      alert('Invalid user ID. Please check the URL.');
+      return;
+    }
+    
     if (!formData.name || !formData.email) {
       alert('Please fill in all required fields');
       return;
@@ -185,6 +208,7 @@ const EditAdminUser = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      console.log('Updating admin user with userId:', userId);
       
       // Prepare update data - only include password if it's provided
       const updateData: any = {
@@ -229,6 +253,38 @@ const EditAdminUser = () => {
     value: product._id,
     label: `${product.name} (${product.type})`
   }));
+
+  console.log('Available products:', products);
+  console.log('Product options:', productOptions);
+  console.log('Form data products:', formData.products);
+  console.log('Selected products for display:', productOptions.filter(option => formData.products.includes(option.value)));
+
+  // Check if userId is valid
+  if (!userId || userId === 'undefined' || userId === 'null') {
+    return (
+      <Fragment>
+        <Seo title={"Edit Admin User"} />
+        <Pageheader currentpage="Edit Admin User" activepage="Admin Users" mainpage="Admin Users" />
+        <div className="grid grid-cols-12 gap-6">
+          <div className="col-span-12">
+            <div className="box">
+              <div className="box-body text-center py-8">
+                <i className="ri-error-warning-line text-6xl text-danger mb-4"></i>
+                <h4 className="text-lg font-semibold text-gray-800 mb-2">Invalid User ID</h4>
+                <p className="text-gray-600 mb-4">The user ID in the URL is invalid or missing.</p>
+                <button
+                  onClick={() => router.push('/admin-users/admin-users')}
+                  className="ti-btn ti-btn-primary"
+                >
+                  <i className="ri-arrow-left-line mr-2"></i> Back to Admin Users
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Fragment>
+    );
+  }
 
   if (loadingData) {
     return (
