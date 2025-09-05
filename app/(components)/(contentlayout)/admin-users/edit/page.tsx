@@ -223,7 +223,7 @@ const EditAdminUser = () => {
         updateData.password = formData.password;
       }
 
-      const response = await axios.put(`${Base_url}admin-users/${userId}`, updateData, {
+      const response = await axios.patch(`${Base_url}admin-users/${userId}`, updateData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
