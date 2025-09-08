@@ -216,13 +216,13 @@ const AdminUsers = () => {
             <div className="box-header">
               <h5 className="box-title">Admin Users List</h5>
               <div className="flex space-x-2">
-                <button 
+                {/* <button 
                   type="button" 
                   className="ti-btn ti-btn-secondary !py-1 !px-2 !text-[0.75rem]"
                   onClick={() => setShowFilters(!showFilters)}
                 >
                   <i className="ri-filter-line font-semibold align-middle"></i> Filters
-                </button>
+                </button> */}
                 <button 
                   type="button" 
                   className="ti-btn ti-btn-danger-full !py-1 !px-2 !text-[0.75rem]"
