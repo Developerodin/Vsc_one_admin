@@ -51,8 +51,7 @@ const EditAdminUser = () => {
   });
 
   const roleOptions = [
-    { value: 'admin', label: 'Admin' },
-    { value: 'superAdmin', label: 'Super Admin' }
+    { value: 'admin', label: 'Admin' }
   ];
 
   const themeOptions = [
