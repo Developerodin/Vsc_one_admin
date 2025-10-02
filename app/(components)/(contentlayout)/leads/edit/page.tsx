@@ -22,6 +22,7 @@ const EditLead = () => {
     // Editable fields
     const [selectedAgent, setSelectedAgent] = useState<string>('');
     const [selectedStatus, setSelectedStatus] = useState<string>('');
+    const [customerFields, setCustomerFields] = useState<any>({});
 
     useEffect(() => {
         if (leadId) {
@@ -45,6 +46,7 @@ const EditLead = () => {
             setLeadData(data);
             setSelectedAgent(data.agent?.id || '');
             setSelectedStatus(data.status || '');
+            setCustomerFields(data.fieldsData || {});
         } catch (error) {
             console.error('Error fetching lead details:', error);
             setError('Failed to load lead details');
@@ -79,7 +81,8 @@ const EditLead = () => {
             const token = localStorage.getItem('token');
             await axios.patch(`${Base_url}leads/${leadId}`, {
                 agent: selectedAgent,
-                status: selectedStatus
+                status: selectedStatus,
+                fieldsData: customerFields
             }, {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -92,6 +95,13 @@ const EditLead = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCustomerFieldChange = (fieldName: string, value: string) => {
+        setCustomerFields((prev: any) => ({
+            ...prev,
+            [fieldName]: value
+        }));
     };
 
     const formatDate = (dateString: string) => {
@@ -131,7 +141,6 @@ const EditLead = () => {
     const tabs = [
         { id: 'overview', label: 'Lead Overview', icon: 'ri-file-list-3-line' },
         { id: 'customer', label: 'Customer Information', icon: 'ri-user-line' },
-        { id: 'product', label: 'Product Information', icon: 'ri-product-hunt-line' },
         { id: 'category', label: 'Category & Subcategory', icon: 'ri-folder-line' }
     ];
 
@@ -271,13 +280,19 @@ const EditLead = () => {
                                 {/* Customer Information Tab */}
                                 {activeTab === 'customer' && (
                                     <div className="space-y-6">
-                                        {leadData.fieldsData && Object.keys(leadData.fieldsData).length > 0 ? (
-                                        <div className="grid grid-cols-12 gap-4">
-                                                {Object.entries(leadData.fieldsData).map(([key, value]: [string, any]) => (
+                                        {Object.keys(customerFields).length > 0 ? (
+                                            <div className="grid grid-cols-12 gap-4">
+                                                {Object.entries(customerFields).map(([key, value]: [string, any]) => (
                                                     <div key={key} className="col-span-12 md:col-span-6">
                                                         <div className="space-y-1">
                                                             <label className="text-sm font-medium text-gray-600">{key}</label>
-                                                            <p className="text-sm font-semibold p-2 bg-gray-50 rounded border">{value || '--'}</p>
+                                                            <input
+                                                                type="text"
+                                                                value={value || ''}
+                                                                onChange={(e) => handleCustomerFieldChange(key, e.target.value)}
+                                                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                                placeholder={`Enter ${key}`}
+                                                            />
                                                         </div>
                                                     </div>
                                                 ))}
@@ -291,60 +306,6 @@ const EditLead = () => {
                                     </div>
                                 )}
 
-                                {/* Product Information Tab */}
-                                {activeTab === 'product' && (
-                                    <div className="space-y-6">
-                                        {leadData.products && leadData.products.length > 0 ? (
-                                            <div className="space-y-4">
-                                                {leadData.products.map((productItem: any, index: number) => (
-                                                    <div key={index} className="border rounded-lg p-4">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <h6 className="font-semibold">{productItem.product?.name || 'Product'}</h6>
-                                                            <span className={`badge ${getStatusBadgeColor(productItem.status)} text-white`}>
-                                                                {productItem.status || '--'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="grid grid-cols-12 gap-4">
-                                                            <div className="col-span-12 md:col-span-6">
-                                                                <div className="space-y-2">
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-sm text-gray-600">Type:</span>
-                                                                        <span className="text-sm font-medium capitalize">{productItem.product?.type || '--'}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-sm text-gray-600">Base Price:</span>
-                                                                        <span className="text-sm font-medium">₹{productItem.product?.pricing?.basePrice?.toLocaleString() || '--'}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="col-span-12 md:col-span-6">
-                                                                <div className="space-y-2">
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-sm text-gray-600">Commission:</span>
-                                                                        <span className="text-sm font-medium">{productItem.product?.commission?.percentage || '--'}%</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            {productItem.product?.description && (
-                                            <div className="col-span-12">
-                                                                    <div>
-                                                                        <span className="text-sm text-gray-600">Description:</span>
-                                                                        <p className="text-sm font-medium mt-1 p-2 bg-gray-50 rounded border">{productItem.product.description}</p>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                            </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-8">
-                                                <i className="ri-product-hunt-line text-4xl text-gray-400 mb-4"></i>
-                                                <p className="text-gray-500">No product information available</p>
-                                            </div>
-                                        )}
-                                        </div>
-                                    )}
 
                                 {/* Category Information Tab */}
                                 {activeTab === 'category' && (
