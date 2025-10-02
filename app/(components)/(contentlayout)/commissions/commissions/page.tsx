@@ -564,16 +564,18 @@ const Commissions = () => {
   };
 
   const calculateTotals = () => {
-    const totals = commissions.reduce((acc, commission) => {
-      acc.totalBaseAmount += commission.baseAmount || 0;
-      acc.totalCommissionAmount += commission.amount || 0;
-      acc.totalTdsAmount += ((commission.baseAmount || 0) * (commission.tdsPercentage || 0)) / 100;
-      return acc;
-    }, {
-      totalBaseAmount: 0,
-      totalCommissionAmount: 0,
-      totalTdsAmount: 0
-    });
+    const totals = commissions
+      .filter(commission => commission.status === 'approved')
+      .reduce((acc, commission) => {
+        acc.totalBaseAmount += commission.baseAmount || 0;
+        acc.totalCommissionAmount += commission.amount || 0;
+        acc.totalTdsAmount += ((commission.baseAmount || 0) * (commission.tdsPercentage || 0)) / 100;
+        return acc;
+      }, {
+        totalBaseAmount: 0,
+        totalCommissionAmount: 0,
+        totalTdsAmount: 0
+      });
 
     return totals;
   };
@@ -790,14 +792,15 @@ const Commissions = () => {
       <div className="grid grid-cols-12 gap-6">
         {/* Summary Cards */}
         <div className="col-span-12">
-          {(selectedStatus || startDate || endDate || searchQuery.trim()) && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-700">
-                <i className="ri-information-line mr-2"></i>
-                Showing totals for filtered results. Clear filters to see all data.
-              </p>
-            </div>
-          )}
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <i className="ri-information-line mr-2"></i>
+              Totals shown are for approved commissions only.
+              {(selectedStatus || startDate || endDate || searchQuery.trim()) && (
+                <span> Filtered results are displayed in the table below.</span>
+              )}
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {(() => {
               const totals = calculateTotals();
