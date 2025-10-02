@@ -10,6 +10,7 @@ import DataTable from '@/shared/components/DataTable';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import * as XLSX from "xlsx";
 
 
 interface BankAccount {
@@ -116,6 +117,7 @@ interface Commission {
 
 const Commissions = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
+  const [filteredCommissions, setFilteredCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -147,31 +149,117 @@ const Commissions = () => {
     paymentDate: '',
     paymentMethod: 'bank_transfer'
   });
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState<Date | null>(null);
+  const [exportEndDate, setExportEndDate] = useState<Date | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
+  const [userProducts, setUserProducts] = useState<string[]>([]);
+  const [hasAccess, setHasAccess] = useState<boolean>(true);
+
+  // Custom input component for DatePicker to ensure calendar opens on click
+  const CustomDateInput = ({ value, onClick, placeholder }: any) => (
+    <input
+      value={value}
+      onClick={(e) => {
+        console.log('CustomDateInput clicked:', { value, placeholder, event: e });
+        onClick(e);
+      }}
+      placeholder={placeholder}
+      readOnly
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+    />
+  );
+
+  // Function to check user access based on role and products
+  const checkUserAccess = () => {
+    try {
+      const userDataString = localStorage.getItem('user');
+      if (!userDataString) {
+        console.error('No user data found in localStorage');
+        setHasAccess(false);
+        return;
+      }
+
+      const userData = JSON.parse(userDataString);
+      console.log('User data from localStorage:', userData);
+
+      const role = userData.role || '';
+      const products = userData.products || [];
+
+      setUserRole(role);
+      setUserProducts(products);
+
+      // Check if user has access
+      if (role === 'superAdmin') {
+        // Super admin has access to all commissions
+        setHasAccess(true);
+        console.log('Super admin access granted - all commissions');
+      } else if (role === 'admin') {
+        // Admin has access only to commissions with assigned products
+        if (products && products.length > 0) {
+          setHasAccess(true);
+          console.log('Admin access granted for products:', products);
+        } else {
+          setHasAccess(false);
+          console.log('Admin has no products assigned');
+        }
+      } else {
+        // Other roles have no access
+        setHasAccess(false);
+        console.log('No access for role:', role);
+      }
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      setHasAccess(false);
+    }
+  };
 
   useEffect(() => {
-    fetchCommissions();
-  }, [currentPage, itemsPerPage, selectedStatus, startDate, endDate]);
+    checkUserAccess();
+  }, []);
+
+  // Fetch data when user access is determined
+  useEffect(() => {
+    if (hasAccess && userRole && (userRole === 'superAdmin' || (userRole === 'admin' && userProducts.length > 0))) {
+      fetchCommissions();
+    }
+  }, [hasAccess, userRole, userProducts]);
+
+  // Handle pagination and filtering
+  useEffect(() => {
+    let filtered = commissions;
+    
+    // Apply pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedData = filtered.slice(startIndex, endIndex);
+    
+    setFilteredCommissions(paginatedData);
+    setTotalResults(filtered.length);
+    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+  }, [commissions, currentPage, itemsPerPage]);
 
   // Separate useEffect for search with debouncing
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (searchQuery !== undefined) {
+      if (searchQuery !== undefined && hasAccess && userRole && (userRole === 'superAdmin' || (userRole === 'admin' && userProducts.length > 0))) {
         fetchCommissions();
       }
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, hasAccess, userRole, userProducts]);
 
   const fetchCommissions = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
       
-      // Build query parameters
+      // First, fetch ALL commissions to get complete data for filtering
       const params = new URLSearchParams();
-      params.append('limit', itemsPerPage.toString());
-      params.append('page', currentPage.toString());
+      params.append('limit', '1000'); // Fetch more records for frontend filtering
+      params.append('page', '1');
       
       if (selectedStatus) {
         params.append('status', selectedStatus);
@@ -192,6 +280,8 @@ const Commissions = () => {
       const apiUrl = `${Base_url}commissions?${params.toString()}`;
       console.log('Commissions API URL:', apiUrl);
       console.log('Search Query:', searchQuery);
+      console.log('User Role:', userRole);
+      console.log('User Products:', userProducts);
       
       const response = await axios.get(apiUrl, {
         headers: {
@@ -204,23 +294,39 @@ const Commissions = () => {
       const commissionsData = Array.isArray(response.data) ? response.data : response.data.results;
       
       // Ensure commissionsData is always an array and filter out invalid entries
-      const validCommissions = Array.isArray(commissionsData) 
+      let validCommissions = Array.isArray(commissionsData) 
         ? commissionsData.filter(commission => 
             commission && 
             typeof commission === 'object' && 
             commission.id
           )
         : [];
-      
-      if (!Array.isArray(response.data)) {
-        setTotalPages(response.data.totalPages || 1);
-        setTotalResults(response.data.totalResults || validCommissions.length);
+
+      // Apply role-based filtering
+      if (userRole === 'admin' && userProducts.length > 0) {
+        // Filter commissions to only show those with assigned products
+        validCommissions = validCommissions.filter(commission => {
+          if (commission.product && commission.product.id) {
+            const hasAccess = userProducts.includes(commission.product.id);
+            console.log('Commission product ID:', commission.product.id, 'Has access:', hasAccess);
+            return hasAccess;
+          }
+          console.log('Commission has no product ID');
+          return false;
+        });
+        console.log('Filtered commissions for admin:', validCommissions.length, 'out of', commissionsData.length);
+      } else if (userRole === 'superAdmin') {
+        // Super admin sees all commissions
+        console.log('Super admin sees all commissions:', validCommissions.length);
       } else {
-        setTotalPages(1);
-        setTotalResults(validCommissions.length);
+        // No access - show empty results
+        validCommissions = [];
+        console.log('No access - showing empty commissions results');
       }
 
+      console.log('All valid commissions after filtering:', validCommissions.length);
       setCommissions(validCommissions);
+      // Pagination will be handled by useEffect
     } catch (error) {
       console.error("Error fetching commissions:", error);
     } finally {
@@ -483,7 +589,7 @@ const Commissions = () => {
     { key: 'actions', label: 'Actions', sortable: false }
   ];
 
-  const tableData = commissions.map(commission => ({
+  const tableData = filteredCommissions.map(commission => ({
     product: commission.product ? (
       <Link href={`/products/products?id=${commission.product.id || ''}`} className="text-primary hover:underline">
         {commission.product.name || 'N/A'}
@@ -519,7 +625,7 @@ const Commissions = () => {
       },
       {
         icon: 'ri-bank-line',
-        className: 'ti-btn-info',
+          className: 'ti-btn-info',
         onClick: () => handleSelectBankAccount(commission),
         title: 'Select Bank Account'
       }
@@ -545,6 +651,135 @@ const Commissions = () => {
     setEndDate(null);
     setSearchQuery('');
     setCurrentPage(1);
+  };
+
+  const handleExport = async () => {
+    try {
+      setExportLoading(true);
+      const token = localStorage.getItem("token");
+      
+      // Build query parameters for export
+      const params = new URLSearchParams();
+      params.append('limit', '1000'); // Export more records
+      params.append('page', '1');
+      
+      // Apply current filters
+      if (selectedStatus) {
+        params.append('status', selectedStatus);
+      }
+      
+      if (startDate) {
+        params.append('startDate', formatDateForAPI(startDate));
+      }
+      
+      if (endDate) {
+        params.append('endDate', formatDateForAPI(endDate));
+      }
+      
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+      
+      // Apply export date filters if provided (override current filters)
+      if (exportStartDate) {
+        // Remove existing startDate if any
+        params.delete('startDate');
+        params.append('startDate', formatDateForAPI(exportStartDate));
+      }
+      
+      if (exportEndDate) {
+        // Remove existing endDate if any
+        params.delete('endDate');
+        params.append('endDate', formatDateForAPI(exportEndDate));
+      }
+      
+      const apiUrl = `${Base_url}commissions?${params.toString()}`;
+      console.log('Export API URL:', apiUrl);
+      
+      const response = await axios.get(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      
+      const commissionsData = Array.isArray(response.data) ? response.data : response.data.results;
+      let validCommissions = Array.isArray(commissionsData) 
+        ? commissionsData.filter(commission => 
+            commission && 
+            typeof commission === 'object' && 
+            commission.id
+          )
+        : [];
+
+      // Apply role-based filtering for export
+      if (userRole === 'admin' && userProducts.length > 0) {
+        validCommissions = validCommissions.filter(commission => {
+          if (commission.product && commission.product.id) {
+            return userProducts.includes(commission.product.id);
+          }
+          return false;
+        });
+      } else if (userRole !== 'superAdmin') {
+        validCommissions = [];
+      }
+      
+      // Prepare data for Excel export
+      const exportData = validCommissions.map((commission, index) => {
+        const baseAmount = commission.baseAmount || 0;
+        const tdsPercentage = commission.tdsPercentage || 0;
+        const tdsAmount = (baseAmount * tdsPercentage) / 100;
+        
+        return {
+          'S.No': index + 1,
+          'Product': commission.product?.name || 'N/A',
+          'Agent Name': commission.agent?.name || 'N/A',
+          'Agent PAN Number': commission.agent?.kycDetails?.panNumber || 'N/A',
+          'Base Amount': baseAmount,
+          'TDS %': tdsPercentage,
+          'TDS Amount': tdsAmount,
+          'Commission Amount': commission.amount || 0
+        };
+      });
+      
+      // Create a worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // Set column widths
+      const colWidths = [
+        { wch: 8 },   // S.No
+        { wch: 25 },  // Product
+        { wch: 20 },  // Agent Name
+        { wch: 15 },  // Agent PAN Number
+        { wch: 15 },  // Base Amount
+        { wch: 10 },  // TDS %
+        { wch: 15 },  // TDS Amount
+        { wch: 18 }   // Commission Amount
+      ];
+      ws['!cols'] = colWidths;
+      
+      // Create a workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Commissions');
+      
+      // Generate filename with date range
+      const startDateStr = exportStartDate ? formatDateForAPI(exportStartDate) : 'all';
+      const endDateStr = exportEndDate ? formatDateForAPI(exportEndDate) : 'all';
+      const filename = `commissions_${startDateStr}_to_${endDateStr}.xlsx`;
+      
+      // Generate Excel file
+      XLSX.writeFile(wb, filename);
+      
+      // Close modal and reset form
+      setShowExportModal(false);
+      setExportStartDate(null);
+      setExportEndDate(null);
+      
+    } catch (error) {
+      console.error("Error exporting commissions:", error);
+      alert('Failed to export commissions data');
+    } finally {
+      setExportLoading(false);
+    }
   };
 
   return (
@@ -612,17 +847,31 @@ const Commissions = () => {
             <div className="box-header">
               <h5 className="box-title">Commissions List</h5>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="ti-btn ti-btn-secondary !py-1 !px-2 !text-[0.75rem]"
-                >
-                  <i className="ri-filter-line font-semibold align-middle"></i> Filters
-                </button>
-              </div>
+                {hasAccess && (
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="ti-btn ti-btn-secondary !py-1 !px-2 !text-[0.75rem]"
+                  >
+                    <i className="ri-filter-line font-semibold align-middle"></i> Filters
+                  </button>
+                )}
+                {hasAccess && (
+                  <button
+                    onClick={() => {
+                      console.log('📤 EXPORT BUTTON clicked - opening modal');
+                      console.log('Current export dates - Start:', exportStartDate, 'End:', exportEndDate);
+                      setShowExportModal(true);
+                    }}
+                    className="ti-btn ti-btn-primary !py-1 !px-2 !text-[0.75rem]"
+                  >
+                    <i className="ri-download-2-line font-semibold align-middle"></i> Export
+                  </button>
+                )}
+            </div>
             </div>
             
             {/* Filters Section */}
-            {showFilters && (
+            {hasAccess && showFilters && (
               <div className="box-body border-b">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
@@ -699,7 +948,21 @@ const Commissions = () => {
             )}
             
             <div className="box-body">
-              {loading ? (
+              {!hasAccess ? (
+                <div className="text-center py-8">
+                  <div className="mb-4">
+                    <i className="ri-shield-cross-line text-6xl text-danger"></i>
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2">Access Denied</h4>
+                  <p className="text-gray-600 mb-4">
+                    You don't have permission to view commissions. Please contact your administrator.
+                  </p>
+                  <div className="text-sm text-gray-500">
+                    <p><strong>Your Role:</strong> {userRole || 'Unknown'}</p>
+                    <p><strong>Assigned Products:</strong> {userProducts.length > 0 ? userProducts.join(', ') : 'None'}</p>
+                  </div>
+                </div>
+              ) : loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
@@ -749,13 +1012,13 @@ const Commissions = () => {
             
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                     Base Amount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                </label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     value={editBaseAmount}
                     onChange={(e) => setEditBaseAmount(e.target.value)}
                     min="0"
@@ -773,9 +1036,9 @@ const Commissions = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     value={editTdsPercentage}
                     onChange={(e) => setEditTdsPercentage(e.target.value)}
-                    min="0"
-                    max="100"
-                    step="0.01"
+                  min="0"
+                  max="100"
+                  step="0.01"
                     placeholder="Enter TDS percentage (0-100)"
                   />
                 </div>
@@ -1224,6 +1487,220 @@ const Commissions = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Export Commissions</h3>
+              <button
+                onClick={() => {
+                  console.log('❌ MODAL CLOSE (X) clicked - closing modal and clearing dates');
+                  console.log('Before close - Start:', exportStartDate, 'End:', exportEndDate);
+                  setShowExportModal(false);
+                  setExportStartDate(null);
+                  setExportEndDate(null);
+                  console.log('After close - modal closed and dates cleared');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="text-sm text-gray-600 mb-4">
+                <p>Select date range for export. Leave empty to export all data.</p>
+                {selectedStatus || startDate || endDate || searchQuery.trim() ? (
+                  <p className="text-blue-600 mt-2">
+                    <i className="ri-information-line mr-1"></i>
+                    Current filters will be applied to the export.
+                  </p>
+                ) : null}
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Date (Optional)
+                  </label>
+                  <DatePicker
+                    selected={exportStartDate}
+                    onChange={(date) => {
+                      console.log('🚀 START DATE onChange triggered:', {
+                        date,
+                        dateType: typeof date,
+                        isDate: date instanceof Date,
+                        timestamp: date ? date.getTime() : null,
+                        formatted: date ? date.toISOString() : null,
+                        currentExportStartDate: exportStartDate,
+                        currentExportEndDate: exportEndDate
+                      });
+                      setExportStartDate(date);
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select Start Date"
+                    customInput={<CustomDateInput placeholder="Select Start Date" />}
+                    maxDate={exportEndDate || new Date()}
+                    isClearable
+                    showYearDropdown
+                    showMonthDropdown
+                    dropdownMode="select"
+                    autoComplete="off"
+                    onSelect={(date) => {
+                      console.log('🎯 START DATE onSelect triggered:', {
+                        date,
+                        dateType: typeof date,
+                        isDate: date instanceof Date,
+                        timestamp: date ? date.getTime() : null,
+                        formatted: date ? date.toISOString() : null
+                      });
+                      setExportStartDate(date);
+                    }}
+                    onCalendarOpen={() => {
+                      console.log('📅 START DATE calendar opened');
+                    }}
+                    onCalendarClose={() => {
+                      console.log('📅 START DATE calendar closed');
+                    }}
+                    onFocus={(e) => {
+                      console.log('👆 START DATE onFocus:', e);
+                    }}
+                    onBlur={(e) => {
+                      console.log('👆 START DATE onBlur:', e);
+                    }}
+                    onClickOutside={() => {
+                      console.log('👆 START DATE clicked outside');
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Date (Optional)
+                  </label>
+                  <DatePicker
+                    selected={exportEndDate}
+                    onChange={(date) => {
+                      console.log('🚀 END DATE onChange triggered:', {
+                        date,
+                        dateType: typeof date,
+                        isDate: date instanceof Date,
+                        timestamp: date ? date.getTime() : null,
+                        formatted: date ? date.toISOString() : null,
+                        currentExportStartDate: exportStartDate,
+                        currentExportEndDate: exportEndDate
+                      });
+                      setExportEndDate(date);
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select End Date"
+                    customInput={<CustomDateInput placeholder="Select End Date" />}
+                    minDate={exportStartDate || undefined}
+                    maxDate={new Date()}
+                    isClearable
+                    showYearDropdown
+                    showMonthDropdown
+                    dropdownMode="select"
+                    autoComplete="off"
+                    onSelect={(date) => {
+                      console.log('🎯 END DATE onSelect triggered:', {
+                        date,
+                        dateType: typeof date,
+                        isDate: date instanceof Date,
+                        timestamp: date ? date.getTime() : null,
+                        formatted: date ? date.toISOString() : null
+                      });
+                      setExportEndDate(date);
+                    }}
+                    onCalendarOpen={() => {
+                      console.log('📅 END DATE calendar opened');
+                    }}
+                    onCalendarClose={() => {
+                      console.log('📅 END DATE calendar closed');
+                    }}
+                    onFocus={(e) => {
+                      console.log('👆 END DATE onFocus:', e);
+                    }}
+                    onBlur={(e) => {
+                      console.log('👆 END DATE onBlur:', e);
+                    }}
+                    onClickOutside={() => {
+                      console.log('👆 END DATE clicked outside');
+                    }}
+                  />
+                </div>
+                
+                {(exportStartDate || exportEndDate) && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('🧹 CLEAR DATES clicked - clearing both dates');
+                        console.log('Before clear - Start:', exportStartDate, 'End:', exportEndDate);
+                        setExportStartDate(null);
+                        setExportEndDate(null);
+                        console.log('After clear - both dates set to null');
+                      }}
+                      className="text-sm text-primary hover:text-primary-dark flex items-center"
+                    >
+                      <i className="ri-refresh-line mr-1"></i>
+                      Clear Dates
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <div className="bg-gray-50 p-3 rounded text-sm">
+                <p className="font-medium text-gray-700 mb-2">Export will include:</p>
+                <ul className="text-gray-600 space-y-1">
+                  <li>• Product Name</li>
+                  <li>• Agent Name</li>
+                  <li>• Agent PAN Number</li>
+                  <li>• Base Amount</li>
+                  <li>• TDS Percentage</li>
+                  <li>• TDS Amount (Calculated)</li>
+                  <li>• Commission Amount</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 p-4 border-t">
+              <button
+                onClick={() => {
+                  console.log('❌ CANCEL BUTTON clicked - closing modal and clearing dates');
+                  console.log('Before cancel - Start:', exportStartDate, 'End:', exportEndDate);
+                  setShowExportModal(false);
+                  setExportStartDate(null);
+                  setExportEndDate(null);
+                  console.log('After cancel - modal closed and dates cleared');
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exportLoading}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exportLoading ? (
+                  <>
+                    <i className="ri-loader-4-line animate-spin mr-2"></i>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <i className="ri-download-2-line mr-2"></i>
+                    Export Excel
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

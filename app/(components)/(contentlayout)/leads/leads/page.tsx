@@ -71,7 +71,6 @@ const Leads = () => {
     const [deleteSelectedLoading, setDeleteSelectedLoading] = useState(false);
     const [sortKey, setSortKey] = useState<string>('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [allLeads, setAllLeads] = useState<RawLead[]>([]);
     const [leadStats, setLeadStats] = useState<LeadStats>({
         total: 0,
         new: 0,
@@ -85,6 +84,9 @@ const Leads = () => {
     const [selectedAgent, setSelectedAgent] = useState('');
     const [categories, setCategories] = useState<any[]>([]);
     const [showFilters, setShowFilters] = useState(false);
+    const [userRole, setUserRole] = useState<string>('');
+    const [userProducts, setUserProducts] = useState<string[]>([]);
+    const [hasAccess, setHasAccess] = useState<boolean>(true);
 
     // Define filters for lead statuses
     const leadFilters = [
@@ -131,16 +133,67 @@ const Leads = () => {
         }))
     ];
 
+    // Function to check user access based on role and products
+    const checkUserAccess = () => {
+        try {
+            const userDataString = localStorage.getItem('user');
+            if (!userDataString) {
+                console.error('No user data found in localStorage');
+                setHasAccess(false);
+                return;
+            }
+
+            const userData = JSON.parse(userDataString);
+            console.log('User data from localStorage:', userData);
+
+            const role = userData.role || '';
+            const products = userData.products || [];
+
+            setUserRole(role);
+            setUserProducts(products);
+
+            // Check if user has access
+            if (role === 'superAdmin') {
+                // Super admin has access to all leads
+                setHasAccess(true);
+                console.log('Super admin access granted - all leads');
+            } else if (role === 'admin') {
+                // Admin has access only to leads with assigned products
+                if (products && products.length > 0) {
+                    setHasAccess(true);
+                    console.log('Admin access granted for products:', products);
+                } else {
+                    setHasAccess(false);
+                    console.log('Admin has no products assigned');
+                }
+            } else {
+                // Other roles have no access
+                setHasAccess(false);
+                console.log('No access for role:', role);
+            }
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+            setHasAccess(false);
+        }
+    };
+
+    useEffect(() => {
+        checkUserAccess();
+    }, []);
+
+    // Fetch data when user access is determined
     useEffect(() => {
         const fetchAllData = async () => {
             try {
                 setLoading(true);
-                await Promise.all([
-                    fetchRawLeads(),
-                    fetchUsers(),
-                    fetchProducts(),
-                    fetchCategories()
-                ]);
+                if (hasAccess) {
+                    await Promise.all([
+                        fetchRawLeads(),
+                        fetchUsers(),
+                        fetchProducts(),
+                        fetchCategories()
+                    ]);
+                }
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setError('Failed to fetch data');
@@ -150,14 +203,46 @@ const Leads = () => {
         };
 
         fetchAllData();
-    }, [currentPage, itemsPerPage, selectedStatus, selectedCategory, selectedAgent]);
+    }, [hasAccess, userRole, userProducts]);
+
+    // Refetch data when filters change
+    useEffect(() => {
+        if (hasAccess) {
+            fetchRawLeads();
+        }
+    }, [selectedStatus, selectedCategory, selectedAgent, selectedFilter, searchQuery]);
+
+    // Separate useEffect for search with debouncing
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            if (searchQuery !== undefined && hasAccess) {
+                fetchRawLeads();
+            }
+        }, 500); // 500ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery, hasAccess]);
 
     // Update formatted leads whenever raw leads change
     useEffect(() => {
         if (rawLeads.length > 0) {
             formatLeadsData();
         }
-    }, [rawLeads]);
+    }, [rawLeads, userRole, userProducts]);
+
+    // Handle frontend pagination and filtering
+    useEffect(() => {
+        let filtered = getFilteredLeads();
+        
+        // Apply pagination
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedData = filtered.slice(startIndex, endIndex);
+        
+        setFilteredLeads(paginatedData);
+        setTotalResults(filtered.length);
+        setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    }, [leads, currentPage, itemsPerPage, selectedFilter, searchQuery]);
 
     // Filter leads based on selected filter and search query
     const getFilteredLeads = () => {
@@ -185,67 +270,38 @@ const Leads = () => {
         return filtered;
     };
 
-    // Update filtered leads when filter or search changes
+    // Calculate lead stats from the same filtered leads data
     useEffect(() => {
-        const filtered = getFilteredLeads();
-        setFilteredLeads(filtered);
-        setTotalResults(filtered.length);
-        setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-        setCurrentPage(1);
-    }, [selectedFilter, searchQuery, itemsPerPage]);
-
-    // Update filtered leads when leads data changes
-    useEffect(() => {
-        const filtered = getFilteredLeads();
-        setFilteredLeads(filtered);
-    }, [leads]);
-
-    // Fetch all leads via pagination for stats
-    const fetchAllLeadsForStats = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            let page = 1;
-            let allResults: RawLead[] = [];
-            let hasMore = true;
-            while (hasMore) {
-                // Build query parameters for stats (without filters to get all leads for accurate stats)
-                const queryParams = new URLSearchParams({
-                    limit: '100',
-                    page: page.toString()
+        if (rawLeads.length > 0) {
+            // Apply the same role-based filtering for stats
+            let leadsForStats = rawLeads;
+            
+            if (userRole === 'admin' && userProducts.length > 0) {
+                leadsForStats = rawLeads.filter((lead: any) => {
+                    if (lead.products && lead.products.length > 0) {
+                        return lead.products.some((leadProduct: any) => 
+                            userProducts.includes(leadProduct.product?.id || leadProduct.id)
+                        );
+                    }
+                    return false;
                 });
-
-                const response = await axios.get(`${Base_url}leads?${queryParams.toString()}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const results = response.data.results || [];
-                allResults = [...allResults, ...results];
-                if (results.length < 100) {
-                    hasMore = false;
-                } else {
-                    page++;
-                }
+            } else if (userRole !== 'superAdmin') {
+                leadsForStats = [];
             }
-            setAllLeads(allResults);
-        } catch (error) {
-            console.error('Error fetching all leads for stats:', error);
+
+            const stats = {
+                total: leadsForStats.length,
+                new: leadsForStats.filter(lead => lead.status === 'new').length,
+                interested: leadsForStats.filter(lead => lead.status === 'interested').length,
+                contacted: leadsForStats.filter(lead => lead.status === 'contacted').length,
+                closed: leadsForStats.filter(lead => lead.status === 'closed').length
+            };
+            
+            console.log('Calculating stats from leads:', leadsForStats.length, 'Raw leads:', rawLeads.length);
+            console.log('Stats calculated:', stats);
+            setLeadStats(stats);
         }
-    };
-
-    useEffect(() => {
-        fetchAllLeadsForStats();
-    }, []);
-
-    // Calculate lead stats from allLeads
-    useEffect(() => {
-        const stats = {
-            total: allLeads.length,
-            new: allLeads.filter(lead => lead.status === 'new').length,
-            interested: allLeads.filter(lead => lead.status === 'interested').length,
-            contacted: allLeads.filter(lead => lead.status === 'contacted').length,
-            closed: allLeads.filter(lead => lead.status === 'closed').length
-        };
-        setLeadStats(stats);
-    }, [allLeads]);
+    }, [rawLeads, userRole, userProducts]);
 
     const fetchUsers = async () => {
         try {
@@ -296,10 +352,10 @@ const Leads = () => {
         try {
             const token = localStorage.getItem('token');
             
-            // Build query parameters
+            // First, fetch ALL leads to get complete data for filtering and stats
             const queryParams = new URLSearchParams({
-                limit: itemsPerPage.toString(),
-                page: currentPage.toString()
+                limit: '100', // Fetch more records for frontend filtering
+                page: '1'
             });
 
             // Add filter parameters if they are selected
@@ -312,6 +368,12 @@ const Leads = () => {
             if (selectedAgent) {
                 queryParams.append('agent', selectedAgent);
             }
+            if (selectedFilter && selectedFilter !== 'all') {
+                queryParams.append('status', selectedFilter);
+            }
+            if (searchQuery.trim()) {
+                queryParams.append('search', searchQuery.trim());
+            }
 
             const response = await axios.get(`${Base_url}leads?${queryParams.toString()}`, {
                 headers: {
@@ -320,8 +382,7 @@ const Leads = () => {
             });
             console.log('Leads data:', response.data.results);
             setRawLeads(response.data.results);
-            setTotalPages(response.data.totalPages);
-            setTotalResults(response.data.totalResults);
+            // Pagination will be handled by useEffect
         } catch (err) {
             console.error('Error fetching leads:', err);
             throw err;
@@ -329,7 +390,31 @@ const Leads = () => {
     };
 
     const formatLeadsData = () => {
-        const formattedData = rawLeads.map((lead: any, index: number) => {
+        let leadsToProcess = rawLeads;
+
+        // Filter leads based on user access
+        if (userRole === 'admin' && userProducts.length > 0) {
+            // Filter leads to only show those with assigned products
+            leadsToProcess = rawLeads.filter((lead: any) => {
+                if (lead.products && lead.products.length > 0) {
+                    // Check if any of the lead's products match user's assigned products
+                    return lead.products.some((leadProduct: any) => 
+                        userProducts.includes(leadProduct.product?.id || leadProduct.id)
+                    );
+                }
+                return false;
+            });
+            console.log('Filtered leads for admin:', leadsToProcess.length, 'out of', rawLeads.length);
+        } else if (userRole === 'superAdmin') {
+            // Super admin sees all leads
+            console.log('Super admin sees all leads:', rawLeads.length);
+        } else {
+            // No access - show empty results
+            leadsToProcess = [];
+            console.log('No access - showing empty results');
+        }
+
+        const formattedData = leadsToProcess.map((lead: any, index: number) => {
             const agentName = lead.agent?.name || lead.agent?.email || '--';
             let productName = '--';
             if (lead.products && lead.products.length > 0) {
@@ -599,7 +684,7 @@ const Leads = () => {
                         <div className="box-header">
                             <h5 className="box-title">Leads List</h5>
                             <div className="flex gap-2">
-                                {!(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
+                                {hasAccess && !(selectedIds.length === 0 || deleteSelectedLoading) ? <button 
                                     type="button" 
                                     className="ti-btn ti-btn-danger"
                                     onClick={handleDeleteSelected}
@@ -608,26 +693,30 @@ const Leads = () => {
                                     <i className="ri-delete-bin-line me-2"></i>{" "}
                                     {deleteSelectedLoading ? "Deleting..." : "Delete Selected" + ` (${selectedIds.length})`}
                                 </button> : null}
-                                <button
-                                    type="button"
-                                    className="ti-btn ti-btn-secondary"
-                                    onClick={() => setShowFilters(!showFilters)}
-                                >
-                                    <i className="ri-filter-line me-2"></i> Filters
-                                </button>
-                                <button 
-                                    type="button" 
-                                    className="ti-btn ti-btn-primary"
-                                    onClick={handleExport}
-                                    disabled={selectedIds.length === 0}
-                                >
-                                    <i className="ri-download-2-line me-2"></i> Export
-                                </button>
+                                {hasAccess && (
+                                    <button
+                                        type="button"
+                                        className="ti-btn ti-btn-secondary"
+                                        onClick={() => setShowFilters(!showFilters)}
+                                    >
+                                        <i className="ri-filter-line me-2"></i> Filters
+                                    </button>
+                                )}
+                                {hasAccess && (
+                                    <button 
+                                        type="button" 
+                                        className="ti-btn ti-btn-primary"
+                                        onClick={handleExport}
+                                        disabled={selectedIds.length === 0}
+                                    >
+                                        <i className="ri-download-2-line me-2"></i> Export
+                                    </button>
+                                )}
                             </div>
                         </div>
                         
                         {/* Filter Section */}
-                        {showFilters && (
+                        {hasAccess && showFilters && (
                             <div className="box-body border-b">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
@@ -677,7 +766,21 @@ const Leads = () => {
                             </div>
                         )}
                         <div className="box-body">
-                            {loading ? (
+                            {!hasAccess ? (
+                                <div className="text-center py-8">
+                                    <div className="mb-4">
+                                        <i className="ri-shield-cross-line text-6xl text-danger"></i>
+                                    </div>
+                                    <h4 className="text-lg font-semibold text-gray-800 mb-2">Access Denied</h4>
+                                    <p className="text-gray-600 mb-4">
+                                        You don't have permission to view leads. Please contact your administrator.
+                                    </p>
+                                    <div className="text-sm text-gray-500">
+                                        <p><strong>Your Role:</strong> {userRole || 'Unknown'}</p>
+                                        <p><strong>Assigned Products:</strong> {userProducts.length > 0 ? userProducts.join(', ') : 'None'}</p>
+                                    </div>
+                                </div>
+                            ) : loading ? (
                                 <div className="text-center py-4">Loading leads...</div>
                             ) : error ? (
                                 <div className="text-center py-4 text-danger">{error}</div>
