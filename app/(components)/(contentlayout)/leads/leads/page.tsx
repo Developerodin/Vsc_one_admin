@@ -96,24 +96,32 @@ const Leads = () => {
         { value: 'expired', label: 'Expired' },
         { value: 'converted', label: 'Converted' },
         { value: 'interested', label: 'Interested' },
-        { value: 'not_interested', label: 'Not Interested' }
+        { value: 'not_interested', label: 'Not Interested' },
+        { value: 'closed', label: 'Success' },
+        { value: 'lost', label: 'Closed' }
     ];
 
-    // Status options for filter
-    const statusOptions = [
-        { value: '', label: 'All Statuses' },
-        { value: 'new', label: 'New' },
-        { value: 'contacted', label: 'Contacted' },
-        { value: 'interested', label: 'Interested' },
-        { value: 'followUp', label: 'Follow Up' },
-        { value: 'qualified', label: 'Qualified' },
-        { value: 'proposal', label: 'Proposal' },
-        { value: 'negotiation', label: 'Negotiation' },
-        { value: 'closed', label: 'Closed' },
-        { value: 'expired', label: 'Expired' },
-        { value: 'converted', label: 'Converted' },
-        { value: 'not_interested', label: 'Not Interested' }
-    ];
+    // Status options for filter - will be updated after formatStatusForDisplay is defined
+    const getStatusOptions = () => {
+        const baseOptions = [
+            { value: '', label: 'All Statuses' },
+            { value: 'new', label: 'New' },
+            { value: 'contacted', label: 'Contacted' },
+            { value: 'interested', label: 'Interested' },
+            { value: 'followUp', label: 'Follow Up' },
+            { value: 'qualified', label: 'Qualified' },
+            { value: 'proposal', label: 'Proposal' },
+            { value: 'negotiation', label: 'Negotiation' },
+            { value: 'closed', label: 'Success' },
+            { value: 'expired', label: 'Expired' },
+            { value: 'converted', label: 'Converted' },
+            { value: 'not_interested', label: 'Not Interested' },
+            { value: 'lost', label: 'Closed' }
+        ];
+        return baseOptions;
+    };
+    
+    const statusOptions = getStatusOptions();
 
     // Agent options for filter
     const agentOptions = [
@@ -132,6 +140,15 @@ const Leads = () => {
             label: category.name
         }))
     ];
+
+    // Format status for display
+    const formatStatusForDisplay = (status: string) => {
+        const statusMap: { [key: string]: string } = {
+            'closed': 'Success',
+            'lost': 'Closed'
+        };
+        return statusMap[status?.toLowerCase()] || status;
+    };
 
     // Function to check user access based on role and products
     const checkUserAccess = () => {
@@ -250,7 +267,9 @@ const Leads = () => {
         
         // Apply frontend filter (selectedFilter)
         if (selectedFilter !== 'all') {
-            filtered = filtered.filter(lead => lead.status === selectedFilter);
+            // Convert selectedFilter to display format for comparison
+            const displayStatus = formatStatusForDisplay(selectedFilter);
+            filtered = filtered.filter(lead => lead.status === displayStatus);
         }
         
         // Apply search query
@@ -425,7 +444,7 @@ const Leads = () => {
                 id: lead.id,
                 srNo: index + 1,
                 agentName: agentName,
-                status: lead.status || '--',
+                status: formatStatusForDisplay(lead.status) || '--',
                 product: productName,
                 leadTracking: <Link href={`/leads/timeline?id=${lead.id}`} className="text-primary hover:text-primary-dark">View Timeline</Link>,
                 actions: [
@@ -497,7 +516,8 @@ const Leads = () => {
         { value: 'qualified', label: 'Qualified' },
         { value: 'proposal', label: 'Proposal' },
         { value: 'negotiation', label: 'Negotiation' },
-        { value: 'closed', label: 'Closed' }
+        { value: 'closed', label: 'Success' },
+        { value: 'lost', label: 'Closed' }
     ];
 
     const ProductOptions = [
@@ -666,13 +686,13 @@ const Leads = () => {
                     </div>
                 </div>
                 <div className="col-span-12 sm:col-span-3 md:col-span-2">
-                    <div className="box bg-danger text-white p-3 rounded-md">
+                    <div className="box bg-success text-white p-3 rounded-md">
                         <div className="flex items-center gap-2">
                             <div>
-                                <div className="text-xs font-medium">Closed Leads</div>
+                                <div className="text-xs font-medium">Success Leads</div>
                                 <div className="text-lg font-bold">{leadStats.closed}</div>
                             </div>
-                            <i className="ri-close-circle-line text-2xl ml-auto"></i>
+                            <i className="ri-check-circle-line text-2xl ml-auto"></i>
                         </div>
                     </div>
                 </div>

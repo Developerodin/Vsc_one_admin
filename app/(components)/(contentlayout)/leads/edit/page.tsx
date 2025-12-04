@@ -115,13 +115,22 @@ const EditLead = () => {
         });
     };
 
+    const formatStatusForDisplay = (status: string) => {
+        const statusMap: { [key: string]: string } = {
+            'closed': 'Success',
+            'lost': 'Closed'
+        };
+        return statusMap[status?.toLowerCase()] || status;
+    };
+
     const getStatusBadgeColor = (status: string) => {
         switch (status?.toLowerCase()) {
             case 'new': return 'bg-primary';
             case 'contacted': return 'bg-primary';
             case 'interested': return 'bg-primary';
             case 'qualified': return 'bg-primary';
-            case 'closed': return 'bg-primary';
+            case 'closed': return 'bg-green-500'; // Success
+            case 'lost': return 'bg-orange-500'; // Closed
             default: return 'bg-gray-400';
         }
     };
@@ -134,8 +143,8 @@ const EditLead = () => {
         { value: 'qualified', label: 'Qualified' },
         { value: 'proposal', label: 'Proposal' },
         { value: 'negotiation', label: 'Negotiation' },
-        { value: 'closed', label: 'Closed' },
-        { value: 'lost', label: 'Lost' }
+        { value: 'closed', label: 'Success' },
+        { value: 'lost', label: 'Closed' }
     ];
 
     const tabs = [
@@ -188,7 +197,7 @@ const EditLead = () => {
                             <h5 className="box-title">Edit Lead</h5>
                                 <div className="flex items-center gap-3">
                                     <span className={`badge ${getStatusBadgeColor(selectedStatus)} text-white px-3 py-1`}>
-                                        {selectedStatus || '--'}
+                                        {formatStatusForDisplay(selectedStatus) || '--'}
                                     </span>
                                     <button
                                         type="button"

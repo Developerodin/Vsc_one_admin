@@ -60,6 +60,14 @@ const LeadTimeline = () => {
         });
     };
 
+    const formatStatusForDisplay = (status: string) => {
+        const statusMap: { [key: string]: string } = {
+            'closed': 'Success',
+            'lost': 'Closed'
+        };
+        return statusMap[status?.toLowerCase()] || status;
+    };
+
     const getPhaseIcon = (phase: any) => {
         if (phase.completed) return 'ri-check-line text-green-500';
         if (phase.active) return 'ri-play-circle-line text-blue-500';
@@ -80,8 +88,8 @@ const LeadTimeline = () => {
             case 'contacted': return 'bg-primary';
             case 'interested': return 'bg-primary';
             case 'qualified': return 'bg-primary';
-            case 'closed': return 'bg-green-500';
-            case 'lost': return 'bg-red-500';
+            case 'closed': return 'bg-green-500'; // Success
+            case 'lost': return 'bg-orange-500'; // Closed
             default: return 'bg-gray-400';
         }
     };
@@ -236,7 +244,7 @@ const LeadTimeline = () => {
                         <h5 className="box-title">Lead Overview</h5>
                         <div className="flex items-center gap-3">
                             <span className={`badge ${getStatusBadgeColor(timelineData.currentStatus)} text-white px-3 py-1`}>
-                                {timelineData.currentStatus || '--'}
+                                {formatStatusForDisplay(timelineData.currentStatus) || '--'}
                             </span>
                             <Link href="/leads/leads" className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors flex items-center gap-2">
                                 <i className="ri-arrow-left-line"></i>
@@ -313,7 +321,7 @@ const LeadTimeline = () => {
                                 return (
                                     <li key={index}>
                                     <div className="timeline-time text-end">
-                                            <span className="date">{phase.name.toUpperCase()}</span>
+                                            <span className="date">{formatStatusForDisplay(phase.name).toUpperCase()}</span>
                                             <span className="time inline-block">{phase.estimatedDuration}</span>
                                     </div>
                                     <div className="timeline-icon">
@@ -331,7 +339,7 @@ const LeadTimeline = () => {
                                             <div className="flex-grow">
                                                 <div className="flex items-center">
                                                     <div className="sm:mt-0 mt-2">
-                                                            <p className="mb-0 text-[.875rem] font-semibold capitalize">{phase.name}</p>
+                                                            <p className="mb-0 text-[.875rem] font-semibold capitalize">{formatStatusForDisplay(phase.name)}</p>
                                                             <p className="mb-0 text-[#8c9097] dark:text-white/50">{phase.description}</p>
                                                             <div className="flex items-center gap-2 mt-2">
                                                                 <span className={`badge ${phaseStatusClass}`}>
@@ -444,7 +452,7 @@ const LeadTimeline = () => {
                                                 <div className="flex items-center justify-between">
                                                     <div>
                                                         <span className="font-semibold text-sm capitalize">
-                                                            {history.status.replace(/([A-Z])/g, ' $1').replace('_', ' ').trim()}
+                                                            {formatStatusForDisplay(history.status.replace(/([A-Z])/g, ' $1').replace('_', ' ').trim())}
                                                         </span>
                                                         {history.remark && (
                                                             <p className="text-xs text-gray-600 mt-1">
@@ -476,7 +484,7 @@ const LeadTimeline = () => {
                                     {timelineData.remainingSteps.slice(0, 3).map((step: any, index: number) => (
                                         <div key={index} className="flex items-center gap-3">
                                             <i className="ri-arrow-right-line text-blue-600"></i>
-                                            <span className="text-sm font-medium capitalize">{step.name}</span>
+                                            <span className="text-sm font-medium capitalize">{formatStatusForDisplay(step.name)}</span>
                                             <span className="text-xs text-gray-500">({step.estimatedDuration})</span>
                                         </div>
                                     ))}
@@ -504,7 +512,7 @@ const LeadTimeline = () => {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Current Status: <span className="font-semibold capitalize">{selectedPhase?.name}</span>
+                                    Current Status: <span className="font-semibold capitalize">{formatStatusForDisplay(selectedPhase?.name)}</span>
                                 </label>
                             </div>
                             
@@ -519,11 +527,14 @@ const LeadTimeline = () => {
                                     required
                                 >
                                     <option value="">Select Status</option>
-                                    {['new', 'contacted', 'interested', 'followUp', 'qualified', 'proposal', 'negotiation', 'closed', 'lost'].map((status) => (
-                                        <option key={status} value={status}>
-                                            {status.charAt(0).toUpperCase() + status.slice(1).replace(/([A-Z])/g, ' $1').trim()}
-                                        </option>
-                                    ))}
+                                    {['new', 'contacted', 'interested', 'followUp', 'qualified', 'proposal', 'negotiation', 'closed', 'lost'].map((status) => {
+                                        const displayStatus = formatStatusForDisplay(status.charAt(0).toUpperCase() + status.slice(1).replace(/([A-Z])/g, ' $1').trim());
+                                        return (
+                                            <option key={status} value={status}>
+                                                {displayStatus}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </div>
                             

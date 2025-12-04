@@ -52,13 +52,22 @@ const ViewLead = () => {
         });
     };
 
+    const formatStatusForDisplay = (status: string) => {
+        const statusMap: { [key: string]: string } = {
+            'closed': 'Success',
+            'lost': 'Closed'
+        };
+        return statusMap[status?.toLowerCase()] || status;
+    };
+
     const getStatusBadgeColor = (status: string) => {
         switch (status?.toLowerCase()) {
             case 'new': return 'bg-primary';
             case 'contacted': return 'bg-primary';
             case 'interested': return 'bg-primary';
             case 'qualified': return 'bg-primary';
-            case 'closed': return 'bg-primary';
+            case 'closed': return 'bg-green-500'; // Success
+            case 'lost': return 'bg-orange-500'; // Closed
             default: return 'bg-gray-400';
         }
     };
@@ -107,7 +116,7 @@ const ViewLead = () => {
                                 <h5 className="box-title">Lead Overview</h5>
                                 <div className="flex items-center gap-3">
                                     <span className={`badge ${getStatusBadgeColor(leadData.status)} text-white px-3 py-1`}>
-                                        {leadData.status || '--'}
+                                        {formatStatusForDisplay(leadData.status) || '--'}
                                     </span>
                                     <button
                                         onClick={() => router.push('/leads/leads')}
@@ -193,7 +202,7 @@ const ViewLead = () => {
                                             <div className="flex items-center justify-between mb-3">
                                                 <h6 className="font-semibold">{productItem.product?.name || 'Product'}</h6>
                                                 <span className={`badge ${getStatusBadgeColor(productItem.status)} text-white`}>
-                                                    {productItem.status || '--'}
+                                                    {formatStatusForDisplay(productItem.status) || '--'}
                                                 </span>
                                             </div>
                                             <div className="space-y-2">
